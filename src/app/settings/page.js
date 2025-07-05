@@ -1,18 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function SettingsPage() {
-  const [username, setUsername] = useState(localStorage.getItem("rusil_username") || "");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [profilePic, setProfilePic] = useState(localStorage.getItem("rusil_profilePic") || "");
-  const [picInput, setPicInput] = useState(profilePic);
+  const [profilePic, setProfilePic] = useState("");
+  const [picInput, setPicInput] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picTries, setPicTries] = useState(0);
   const [editField, setEditField] = useState(null); // 'username' | 'password' | 'pic'
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUsername(localStorage.getItem("rusil_username") || "");
+      const pic = localStorage.getItem("rusil_profilePic") || "";
+      setProfilePic(pic);
+      setPicInput(pic);
+    }
+  }, []);
 
   function handlePicChange(e) {
     setPicInput(e.target.value);
@@ -41,9 +50,10 @@ export default function SettingsPage() {
       setError("Password required");
       return;
     }
-    if (editField === "username") localStorage.setItem("rusil_username", username);
-    if (editField === "pic") localStorage.setItem("rusil_profilePic", picInput);
-    // Password is not stored for demo, but you can store it if needed
+    if (typeof window !== "undefined") {
+      if (editField === "username") localStorage.setItem("rusil_username", username);
+      if (editField === "pic") localStorage.setItem("rusil_profilePic", picInput);
+    }
     setSuccess("Settings updated!");
     setEditField(null);
     setPassword("");
