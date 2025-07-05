@@ -12,7 +12,7 @@ export async function POST(request) {
   const user = users.find(u => u.username === username && u.password === password);
   if (user) {
     // Set a cookie for SSR auth (expires in 7 days)
-    return NextResponse.json({ success: true }, {
+    return NextResponse.json({ success: true, user: { username: user.username, profilePicture: user.profilePicture } }, {
       headers: {
         "Set-Cookie": `rusil_auth=1; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax` // 7 days
       }

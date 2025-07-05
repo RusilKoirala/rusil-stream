@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
-  // Allow only /login and static files for unauthenticated users
-  const isAuth = request.cookies.get("auth")?.value || (typeof window !== "undefined" && localStorage.getItem("auth"));
   const { pathname } = request.nextUrl;
-  if (!isAuth && pathname !== "/login" && !pathname.startsWith("/api") && !pathname.startsWith("/_next") && !pathname.startsWith("/favicon")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/logo") ||
+    pathname.startsWith("/public")
+  ) {
+    return NextResponse.next();
   }
-  // If logged in and on /login, redirect to /home
-  if (isAuth && pathname === "/login") {
-    return NextResponse.redirect(new URL("/home", request.url));
+  const isAuth = request.cookies.get("rusil_auth")?.value;
+  if (!isAuth) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ["/((?!api|_next|favicon.ico|logo|public).*)"],
-};

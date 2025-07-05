@@ -12,35 +12,15 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    // Call server API to check credentials
     const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
+      credentials: "include",
     });
     if (res.ok) {
-      localStorage.setItem("rusil_auth", "1");
-      // Hardcoded user list (keep in sync with users.json.js)
-      const users = [
-  {
-    username: "demo",
-    password: "password123",
-    profilePicture: ""
-  },
-  {
-    username: "Shaksham",
-    password: "password123",
-    profilePicture: "https://media.istockphoto.com/id/585282190/photo/funny-donkey-on-road.jpg?s=612x612&w=0&k=20&c=5MLX9g_jVrW77IQJ0wHY8VqEvdsktLs43m38X_rtEHk="
-  },
-  {
-    username: "1",
-    password: "1",
-    profilePicture: "https://media.istockphoto.com/id/2159593477/photo/two-donkeys.jpg?s=612x612&w=0&k=20&c=CZzNWkGm8K9nuHW2SxE-Jr2SdYOewE2_nrYzxesFjAM=https://media.istockphoto.com/id/2159593477/photo/two-donkeys.jpg?s=612x612&w=0&k=20&c=CZzNWkGm8K9nuHW2SxE-Jr2SdYOewE2_nrYzxesFjAM="
-  }
-];
-
-      const user = users.find((u) => u.username === username);
-      localStorage.setItem("rusil_profilePic", user?.profilePicture || "");
+      const data = await res.json();
+      document.cookie = `username=${encodeURIComponent(data.user?.username || "")}; Path=/; SameSite=Lax`;
       router.replace("/home");
     } else {
       const data = await res.json();
@@ -64,7 +44,10 @@ export default function LoginPage() {
       <div className="flex flex-col items-center mb-8 z-10">
         <span
           className="text-4xl md:text-5xl font-extrabold tracking-tight select-none font-sans px-8 py-3 rounded-2xl bg-black/60 backdrop-blur-lg border border-white/15 shadow-lg text-[#E50914] drop-shadow-lg"
-          style={{ letterSpacing: '2px', textShadow: '0 2px 16px #000, 0 1px 0 #E50914' }}
+          style={{
+            letterSpacing: "2px",
+            textShadow: "0 2px 16px #000, 0 1px 0 #E50914",
+          }}
         >
           Rusil Stream
         </span>

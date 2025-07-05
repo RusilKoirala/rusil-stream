@@ -6,7 +6,15 @@ import Image from "next/image";
 import Link from "next/link";
 import Loading from "../../components/Loading";
 
+function getCookie(name) {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : "";
+}
+
 export default function HomePage() {
+  const [username, setUsername] = useState("");
+  const [profilePic, setProfilePic] = useState("");
   const [trending, setTrending] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [action, setAction] = useState([]);
@@ -16,18 +24,35 @@ export default function HomePage() {
   const [featured, setFeatured] = useState(null);
   const [loading, setLoading] = useState(true);
   const [heroIndex, setHeroIndex] = useState(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [profilePic, setProfilePic] = useState(null);
-  const [username, setUsername] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const router = useRouter();
 
   useEffect(() => {
+    const user = getCookie("username");
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    setUsername(user);
+    // Fetch profilePic from API (simulate session fetch)
+    fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: user, password: "" }) // password blank, just for demo fetch
+    })
+      .then(res => res.json())
+      .then(data => {
+        setProfilePic(data.user?.profilePicture || "");
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+
     Promise.all([
       fetch("/api/movies").then(res => res.json()),
       fetch("/api/movies?query=top").then(res => res.json()),
@@ -46,28 +71,11 @@ export default function HomePage() {
       setHeroIndex(0);
       setLoading(false);
     });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Check login status from localStorage (or cookies if you prefer)
-      const isAuth = localStorage.getItem('rusil_auth') === '1';
-      setIsLoggedIn(isAuth);
-      if (isAuth) {
-        setProfilePic(localStorage.getItem('rusil_profilePic'));
-        setUsername(localStorage.getItem('rusil_username') || '');
-      } else {
-        setProfilePic(null);
-      }
-    }
-  }, []);
+  }, [router]);
 
   function handleLogout() {
-    localStorage.removeItem('rusil_auth');
-    localStorage.removeItem('rusil_profilePic');
-    localStorage.removeItem('rusil_username');
-    setIsLoggedIn(false);
-    setProfilePic(null);
+    document.cookie = "rusil_auth=; Path=/; Max-Age=0; SameSite=Lax";
+    document.cookie = "username=; Path=/; Max-Age=0; SameSite=Lax";
     router.push('/login');
   }
 
@@ -256,17 +264,9 @@ export default function HomePage() {
           className="focus:outline-none"
           aria-label="Account menu"
         >
-          {profilePic ? (
-            <span className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center shadow-lg">
-              <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
-            </span>
-          ) : (
-            <span className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center shadow-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-7 h-7">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 19.5a7.5 7.5 0 1115 0v.75A2.25 2.25 0 0117.25 22.5h-10.5A2.25 2.25 0 014.5 20.25v-.75z" />
-              </svg>
-            </span>
-          )}
+          <span className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center shadow-lg">
+            <Image src="/logo/logo.png" alt="Profile" width={40} height={40} className="rounded-full" />
+          </span>
         </button>
         {open && (
           <div className="absolute right-0 mt-2 w-44 bg-[#181818] rounded-xl shadow-2xl py-2 z-50 border border-gray-700 animate-fade-in">
@@ -321,16 +321,7 @@ export default function HomePage() {
           </form>
           <Link href="/" className="text-lg font-bold hover:underline">Home</Link>
           <div className="relative ml-4">
-            {isLoggedIn ? (
-              <ProfileDropdown onLogout={handleLogout} />
-            ) : (
-              <Link href="/login" title="Login">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-white hover:text-[#E50914] transition">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H9m0 0l3-3m-3 3l3 3" />
-                </svg>
-              </Link>
-            )}
+            <ProfileDropdown onLogout={handleLogout} />
           </div>
         </nav>
         {/* Mobile nav overlay */}
@@ -353,16 +344,7 @@ export default function HomePage() {
             </form>
             <Link href="/" className="text-lg font-bold hover:underline" onClick={() => setNavOpen(false)}>Home</Link>
             <div className="relative">
-              {isLoggedIn ? (
-                <ProfileDropdown onLogout={() => { setNavOpen(false); handleLogout(); }} />
-              ) : (
-                <Link href="/login" title="Login" onClick={() => setNavOpen(false)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-white hover:text-[#E50914] transition">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H9m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                </Link>
-              )}
+              <ProfileDropdown onLogout={() => { setNavOpen(false); handleLogout(); }} />
             </div>
             <button className="absolute top-4 right-4 p-2" onClick={() => setNavOpen(false)} aria-label="Close menu">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7 text-white">
@@ -417,6 +399,29 @@ export default function HomePage() {
           </>
         )}
       </main>
+      {showWelcome && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 md:p-8">
+          <div className="relative flex flex-col items-center gap-4 bg-black/70 border border-[#E50914] rounded-2xl shadow-2xl p-8 w-full max-w-md mb-8 transition-all duration-300" style={{backdropFilter: 'blur(8px)'}}>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="absolute top-2 right-2 text-white text-2xl hover:text-[#E50914] focus:outline-none"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            {profilePic ? (
+              <Image src={profilePic} alt="Profile" width={80} height={80} className="rounded-full border-2 border-[#E50914] bg-white/10 object-cover" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-3xl font-bold border-2 border-[#E50914]">{username[0] ? username[0].toUpperCase() : "U"}</div>
+            )}
+            <h1 className="text-2xl font-bold">Welcome, {username}!</h1>
+            <a href="/settings" className="text-[#E50914] hover:underline">Profile Settings</a>
+            <form method="POST" action="/api/logout" className="mt-4">
+              <button type="submit" className="bg-[#E50914] hover:bg-[#b0060f] text-white font-bold py-2 px-6 rounded-lg transition">Logout</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
