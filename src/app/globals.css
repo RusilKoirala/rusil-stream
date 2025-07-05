@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Enable drag-to-scroll for carousels on desktop */
+.carousel-draggable {
+  cursor: grab;
+}
+.carousel-draggable:active {
+  cursor: grabbing;
+}

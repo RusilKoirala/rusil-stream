@@ -1,0 +1,10 @@
+// public/logo/rusil-stream.svg
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text x="0" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="48" font-weight="bold" fill="#E50914" letter-spacing="2">
+    Rusil
+  </text>
+  <text x="110" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="bold" fill="#fff" letter-spacing="1">
+    Stream
+  </text>
+  <rect x="0" y="50" width="220" height="6" fill="#E50914" rx="3"/>
+</svg>

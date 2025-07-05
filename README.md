@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Rusil Stream
+
+A modern, Netflix-style movie streaming web app built with Next.js, Vite, and Tailwind CSS. Powered by TMDB and VidSrc APIs, featuring a beautiful, responsive UI, authentication, and a premium movie player experience.
+
+## Features
+
+- **Netflix-inspired UI:** Hero banner, carousels, genre pills, and modern gradients.
+- **Authentication:** Login/logout, route protection, and profile management.
+- **Profile Settings:** Change username, password, and profile picture (with fallback).
+- **Responsive Design:** Fully mobile-friendly, with hamburger menu and adaptive layouts.
+- **Movie Player:** Large video player, transparent navbar, genre tags, and detailed info.
+- **Search:** Find movies by title or genre.
+- **Custom Branding:** Transparent logo and Netflix-style text branding.
+- **Easy User Management:** Add users by editing a single file.
 
 ## Getting Started
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### 1. Clone the repository
+```sh
+git clone <your-repo-url>
+cd my-nextjs-movie-app
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+```sh
+npm install
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 3. Run the development server
+```sh
+npm run dev
+```
+Visit [http://localhost:3000](http://localhost:3000) to view the app.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Add/Manage Users
+Edit the users array in `src/app/api/login/route.js` and `src/app/login/page.js` to add or update users and their profile pictures.
 
-## Learn More
+## Deploying to Vercel
+1. Push your code to GitHub, GitLab, or Bitbucket.
+2. Go to [vercel.com](https://vercel.com), sign in, and import your repo.
+3. Click **Deploy**. Vercel will build and host your app automatically.
 
-To learn more about Next.js, take a look at the following resources:
+## Credits
+- [TMDB API](https://www.themoviedb.org/documentation/api) for movie data
+- [VidSrc API](https://vidsrc.to/) for streaming
+- [Next.js](https://nextjs.org/), [Vite](https://vitejs.dev/), [Tailwind CSS](https://tailwindcss.com/)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Made with ❤️ by Rusil**
