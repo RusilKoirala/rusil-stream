@@ -32,7 +32,7 @@ yarn-error.log*
 
 # Vercel
 .vercel
-
+.env
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
@@ -43,6 +43,10 @@ next-env.d.ts
 *.swp
 *.swo
 *~
-
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
 # OS
 Thumbs.db
