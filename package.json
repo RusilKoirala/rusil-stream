@@ -14,6 +14,7 @@
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "hls.js": "^1.6.15",
@@ -24,13 +25,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.5.2",
-    "swr": "^2.3.7"
+    "swr": "^2.3.7",
+    "tailwindcss": "^4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "15.3.5",
-    "tailwindcss": "^4"
+    "eslint-config-next": "15.3.5"
   }
 }
