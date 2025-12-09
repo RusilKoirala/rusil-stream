@@ -1,431 +1,485 @@
-// Home page with Netflix-style carousels
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import Loading from "../../components/Loading";
-
-function getCookie(name) {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : "";
-}
+import Logo from "../../components/Logo";
 
 export default function HomePage() {
-  const [username, setUsername] = useState("");
+  const [user, setUser] = useState(null);
+  const [profileName, setProfileName] = useState("");
   const [profilePic, setProfilePic] = useState("");
   const [trending, setTrending] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [tvShows, setTVShows] = useState([]);
   const [topRated, setTopRated] = useState([]);
-  const [action, setAction] = useState([]);
-  const [editors, setEditors] = useState([]);
-  const [family, setFamily] = useState([]);
-  const [horror, setHorror] = useState([]);
-  const [featured, setFeatured] = useState(null);
+  const [continueWatching, setContinueWatching] = useState([]);
+  const [myList, setMyList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-
+  const [scrolled, setScrolled] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [heroIndex, setHeroIndex] = useState(0);
   const router = useRouter();
+  const searchTimeoutRef = useRef(null);
 
   useEffect(() => {
-    const user = getCookie("username");
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-    setUsername(user);
-    // Fetch profilePic from API (simulate session fetch)
-    fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: user, password: "" }) // password blank, just for demo fetch
-    })
-      .then(res => res.json())
-      .then(data => {
-        setProfilePic(data.user?.profilePicture || "");
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-    Promise.all([
-      fetch("/api/movies").then(res => res.json()),
-      fetch("/api/movies?query=top").then(res => res.json()),
-      fetch("/api/movies?query=action").then(res => res.json()),
-      fetch("/api/movies?query=drama").then(res => res.json()),
-      fetch("/api/movies?query=family").then(res => res.json()),
-      fetch("/api/movies?query=horror").then(res => res.json()),
-    ]).then(([tr, top, act, ed, fam, hor]) => {
-      setTrending(tr.results || []);
-      setTopRated(top.results || []);
-      setAction(act.results || []);
-      setEditors(ed.results ? ed.results.slice(0, 10) : []);
-      setFamily(fam.results || []);
-      setHorror(hor.results || []);
-      setFeatured(tr.results && tr.results.length > 0 ? tr.results[0] : null);
-      setHeroIndex(0);
-      setLoading(false);
-    });
+  useEffect(() => {
+    async function init() {
+      try {
+        const userRes = await fetch("/api/auth/me");
+        if (!userRes.ok) {
+          router.replace("/login");
+          return;
+        }
+        const userData = await userRes.json();
+        setUser(userData.user);
+        
+        const profileId = localStorage.getItem("selectedProfileId");
+        if (!profileId) {
+          router.replace("/profiles");
+          return;
+        }
+        
+        const profile = userData.user.profiles.find(p => p._id === profileId);
+        if (profile) {
+          setProfileName(profile.name);
+          setProfilePic(profile.avatarUrl || "");
+        }
+
+        const responses = await Promise.all([
+          fetch("/api/movies?type=trending"),
+          fetch("/api/movies?type=popular&mediaType=movie"),
+          fetch("/api/movies?type=popular&mediaType=tv"),
+          fetch("/api/movies?type=top_rated&mediaType=movie"),
+          fetch(`/api/history?profileId=${profileId}`),
+          fetch(`/api/saved?profileId=${profileId}`)
+        ]);
+
+        const data = await Promise.all(responses.map(r => r.json()));
+
+        setTrending(data[0].results || []);
+        setMovies(data[1].results || []);
+        setTVShows(data[2].results || []);
+        setTopRated(data[3].results || []);
+        
+        if (data[4].history && data[4].history.length > 0) {
+          setContinueWatching(data[4].history.map(h => ({
+            id: h.movieId,
+            title: h.movieTitle,
+            poster_path: h.posterPath,
+            watchedPercentage: h.watchedPercentage,
+            media_type: 'movie'
+          })));
+        }
+
+        if (data[5].saved && data[5].saved.length > 0) {
+          setMyList(data[5].saved.map(s => ({
+            id: s.movieId,
+            title: s.movieTitle,
+            poster_path: s.posterPath,
+            media_type: 'movie'
+          })));
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Init error:", error);
+        setLoading(false);
+      }
+    }
+    init();
   }, [router]);
 
-  function handleLogout() {
-    document.cookie = "rusil_auth=; Path=/; Max-Age=0; SameSite=Lax";
-    document.cookie = "username=; Path=/; Max-Age=0; SameSite=Lax";
-    router.push('/login');
+  useEffect(() => {
+    if (trending.length > 1) {
+      const interval = setInterval(() => {
+        setHeroIndex((prev) => (prev + 1) % Math.min(trending.length, 5));
+      }, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [trending]);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = setTimeout(async () => {
+        setSearchLoading(true);
+        try {
+          const res = await fetch(`/api/movies?query=${encodeURIComponent(searchTerm)}&mediaType=multi`);
+          const data = await res.json();
+          setSearchResults(data.results?.filter(m => m.poster_path || m.backdrop_path) || []);
+        } catch (error) {
+          console.error("Search error:", error);
+        }
+        setSearchLoading(false);
+      }, 500);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchTerm]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    localStorage.removeItem("selectedProfileId");
+    router.push("/login");
   }
 
-  async function handleSearch(e) {
-    e.preventDefault();
-    if (!searchTerm.trim()) return;
-    setSearchLoading(true);
-    const res = await fetch(`/api/movies?query=${encodeURIComponent(searchTerm)}`);
-    const data = await res.json();
-    setSearchResults(data.results?.filter(m => m.poster_path) || []);
-    setSearchLoading(false);
-    // Optionally, navigate to /movie?query=searchTerm
-    // router.push(`/movie?query=${encodeURIComponent(searchTerm)}`);
-  }
-
-  function Carousel({ title, movies }) {
-    // Drag-to-scroll for desktop
-    const ref = useRef(null);
-    useEffect(() => {
-      const el = ref.current;
-      if (!el) return;
-      let isDown = false;
-      let startX, scrollLeft;
-      const onMouseDown = (e) => {
-        isDown = true;
-        el.classList.add('carousel-draggable');
-        startX = e.pageX - el.offsetLeft;
-        scrollLeft = el.scrollLeft;
-      };
-      const onMouseLeave = () => {
-        isDown = false;
-        el.classList.remove('carousel-draggable');
-      };
-      const onMouseUp = () => {
-        isDown = false;
-        el.classList.remove('carousel-draggable');
-      };
-      const onMouseMove = (e) => {
-        if (!isDown) return;
-        e.preventDefault();
-        const x = e.pageX - el.offsetLeft;
-        const walk = (x - startX) * 2; // scroll-fast
-        el.scrollLeft = scrollLeft - walk;
-      };
-      el.addEventListener('mousedown', onMouseDown);
-      el.addEventListener('mouseleave', onMouseLeave);
-      el.addEventListener('mouseup', onMouseUp);
-      el.addEventListener('mousemove', onMouseMove);
-      return () => {
-        el.removeEventListener('mousedown', onMouseDown);
-        el.removeEventListener('mouseleave', onMouseLeave);
-        el.removeEventListener('mouseup', onMouseUp);
-        el.removeEventListener('mousemove', onMouseMove);
-      };
-    }, []);
+  function ContentCard({ item, showProgress }) {
+    const isTV = item.media_type === 'tv' || item.name;
+    const title = item.title || item.name;
+    const link = isTV ? `/player/tv/${item.id}` : `/player/${item.id}`;
+    
     return (
-      <section className="mb-10">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4 px-2 md:px-0">{title}</h2>
-        <div ref={ref} className="flex gap-6 overflow-x-auto no-scrollbar pb-2 px-2 md:px-0 carousel-draggable">
-          {movies.filter(movie => movie.poster_path).map(movie => (
-            <Link key={movie.id} href={`/player/${movie.id}`} className="group relative min-w-[180px] md:min-w-[220px]">
-              <div className="relative w-[180px] md:w-[220px] h-[270px] md:h-[330px] rounded-lg overflow-hidden bg-gray-800 shadow-2xl">
-                <img 
-                  src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-                  alt={movie.title}
-                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                  style={{aspectRatio: '2/3'}}
-                />
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                  <p className="text-white text-base font-bold mb-1 truncate">{movie.title}</p>
-                  <div className="flex gap-2 text-xs text-gray-200">
-                    {movie.release_date && <span>{movie.release_date.slice(0,4)}</span>}
-                    {movie.vote_average && <span>★ {movie.vote_average.toFixed(1)}</span>}
-                  </div>
+      <Link href={link} className="group relative flex-shrink-0 w-[160px] sm:w-[200px] md:w-[240px] transition-all duration-300 hover:scale-105 hover:z-10">
+        <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-2xl">
+          <img
+            src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+            alt={title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center backdrop-blur-sm shadow-2xl transform group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+
+          {isTV && (
+            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+              TV
+            </div>
+          )}
+
+          {showProgress && item.watchedPercentage > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
+              <div 
+                className="h-full bg-blue-500 transition-all"
+                style={{ width: `${item.watchedPercentage}%` }}
+              />
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-3 px-1">
+          <h3 className="text-sm font-semibold text-white truncate group-hover:text-gray-300 transition-colors">
+            {title}
+          </h3>
+        </div>
+      </Link>
+    );
+  }
+
+  function Carousel({ title, items, showProgress = false }) {
+    const scrollRef = useRef(null);
+
+    const scroll = (direction) => {
+      if (scrollRef.current) {
+        const scrollAmount = direction === "left" ? -800 : 800;
+        scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      }
+    };
+
+    if (!items || items.length === 0) return null;
+
+    return (
+      <div className="mb-10 md:mb-14">
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-5 px-4 md:px-12">
+          {title}
+        </h2>
+        <div className="relative group/carousel">
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-r from-[#0a0a0a] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 flex items-center justify-center"
+          >
+            <svg className="w-10 h-10 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <div
+            ref={scrollRef}
+            className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-4 md:px-12 scroll-smooth pb-2"
+          >
+            {items.map((item) => (
+              <ContentCard key={`${item.id}-${item.media_type}`} item={item} showProgress={showProgress} />
+            ))}
+          </div>
+
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-l from-[#0a0a0a] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 flex items-center justify-center"
+          >
+            <svg className="w-10 h-10 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function PremiumHero() {
+    const featured = trending[heroIndex];
+    if (!featured) return null;
+
+    const isTV = featured.media_type === 'tv' || featured.name;
+    const title = featured.title || featured.name;
+    const link = isTV ? `/player/tv/${featured.id}` : `/player/${featured.id}`;
+
+    return (
+      <div className="relative h-[85vh] md:h-[90vh] w-full mb-8 overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={`https://image.tmdb.org/t/p/original${featured.backdrop_path || featured.poster_path}`}
+            alt={title}
+            className="w-full h-full object-cover scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+        </div>
+
+        <div className="relative h-full flex items-center px-4 md:px-12 lg:px-16 max-w-7xl">
+          <div className="max-w-2xl space-y-5 md:space-y-7">
+            {isTV && (
+              <div className="inline-block bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg">
+                TV SERIES
+              </div>
+            )}
+            
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-2xl">
+              {title}
+            </h1>
+            
+            {featured.vote_average && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-yellow-500/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-yellow-500/30">
+                  <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <span className="text-yellow-500 font-bold text-lg">{featured.vote_average.toFixed(1)}</span>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  // Hero Banner
-  function HeroBanner({ movie }) {
-    if (!movie) return null;
-    return (
-      <div className="relative w-full min-h-[400px] md:min-h-[500px] lg:min-h-[600px] flex items-end bg-black mb-10 overflow-hidden rounded-2xl shadow-2xl group">
-        <img
-          src={movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : "/logo/rusil-stream.svg"}
-          alt={movie.title}
-          className="absolute inset-0 w-full h-full object-cover scale-105 md:scale-110 transition-transform duration-700 group-hover:scale-105"
-          style={{ filter: 'brightness(0.85) blur(0.5px)' }}
-        />
-        {/* Multi-layered fade overlays for cinematic effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/60 to-[#181818] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-        <div className="relative z-10 p-6 md:p-16 max-w-2xl w-full">
-          <h1 className="text-3xl md:text-6xl font-extrabold text-white drop-shadow-xl mb-4 leading-tight">
-            {movie.title}
-          </h1>
-          <p className="text-base md:text-2xl text-gray-200 mb-6 line-clamp-3 drop-shadow-lg">
-            {movie.overview}
-          </p>
-          <div className="flex gap-4">
-            <Link href={`/player/${movie.id}`} className="inline-block bg-[#E50914] text-white text-lg md:text-xl font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-[#b0060f] transition-all focus:outline-none focus:ring-2 focus:ring-[#E50914]">
-              <span className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v15z" />
+            )}
+            
+            <p className="text-sm md:text-base lg:text-lg text-gray-200 line-clamp-3 leading-relaxed drop-shadow-lg max-w-xl">
+              {featured.overview}
+            </p>
+            
+            <div className="flex items-center gap-3 md:gap-4 flex-wrap pt-2">
+              <Link
+                href={link}
+                className="group flex items-center gap-2 md:gap-3 bg-white hover:bg-gray-100 text-black font-bold px-6 md:px-8 py-3 md:py-4 rounded-lg transition-all duration-200 shadow-2xl hover:shadow-white/20 hover:scale-105"
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
                 </svg>
-                Watch Now
-              </span>
-            </Link>
-            <Link href="/login" className="inline-block bg-white/10 text-white text-lg md:text-xl font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-white/20 border border-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-[#E50914]">
-              Sign In
-            </Link>
+                <span className="text-base md:text-lg">Play Now</span>
+              </Link>
+              
+              <Link
+                href={link}
+                className="flex items-center gap-2 md:gap-3 bg-white/10 hover:bg-white/20 text-white font-bold px-6 md:px-8 py-3 md:py-4 rounded-lg transition-all duration-200 backdrop-blur-md border border-white/20 hover:border-white/40 hover:scale-105"
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-base md:text-lg">More Info</span>
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  // Hero Banner Carousel
-  function HeroBannerCarousel({ movies }) {
-    const banners = movies.filter(m => m.backdrop_path).slice(0, 5);
-    useEffect(() => {
-      if (banners.length < 2) return;
-      const interval = setInterval(() => {
-        setHeroIndex(i => (i + 1) % banners.length);
-      }, 6000);
-      return () => clearInterval(interval);
-    }, [banners.length]);
-    if (!banners.length) return null;
-    const movie = banners[heroIndex];
-    return (
-      <div className="relative w-full min-h-[400px] md:min-h-[500px] lg:min-h-[600px] flex items-end bg-black mb-10 overflow-hidden rounded-2xl shadow-2xl group">
-        <img
-          src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
-          alt={movie.title}
-          className="absolute inset-0 w-full h-full object-cover scale-105 md:scale-110 transition-transform duration-700 group-hover:scale-105"
-          style={{ filter: 'brightness(0.85) blur(0.5px)' }}
-        />
-        {/* Multi-layered fade overlays for cinematic effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/60 to-[#181818] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-        <div className="relative z-10 p-6 md:p-16 max-w-2xl w-full">
-          <h1 className="text-3xl md:text-6xl font-extrabold text-white drop-shadow-xl mb-4 leading-tight">
-            {movie.title}
-          </h1>
-          <p className="text-base md:text-2xl text-gray-200 mb-6 line-clamp-3 drop-shadow-lg">
-            {movie.overview}
-          </p>
-          <Link href={`/player/${movie.id}`} className="inline-block bg-[#E50914] text-white text-lg md:text-xl font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-[#b0060f] transition-all focus:outline-none focus:ring-2 focus:ring-[#E50914]">
-            <span className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v15z" />
-              </svg>
-              Watch Now
-            </span>
-          </Link>
-        </div>
-        {/* Dots */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-          {banners.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setHeroIndex(i)}
-              className={`w-3 h-3 rounded-full border-2 border-white transition-all duration-200 ${i === heroIndex ? 'bg-[#E50914] scale-125 shadow-lg' : 'bg-white/40'}`}
-              aria-label={`Show ${i+1}`}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // ProfileDropdown component
-  function ProfileDropdown({ onLogout }) {
-    const [open, setOpen] = useState(false);
-    const router = useRouter();
-    return (
-      <div className="relative">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="focus:outline-none"
-          aria-label="Account menu"
-        >
-          <span className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center shadow-lg">
-            <Image src="/logo/logo.png" alt="Profile" width={40} height={40} className="rounded-full" />
-          </span>
-        </button>
-        {open && (
-          <div className="absolute right-0 mt-2 w-44 bg-[#181818] rounded-xl shadow-2xl py-2 z-50 border border-gray-700 animate-fade-in">
-            <button
-              onClick={() => { setOpen(false); router.push('/settings'); }}
-              className="block w-full text-left px-5 py-3 text-white hover:bg-gray-800 transition rounded-t-xl"
-            >
-              Settings
-            </button>
-            <button
-              onClick={() => { setOpen(false); onLogout(); }}
-              className="block w-full text-left px-5 py-3 text-white hover:bg-gray-800 transition rounded-b-xl"
-            >
-              Logout
-            </button>
+        {trending.length > 1 && (
+          <div className="absolute bottom-8 right-8 flex gap-2">
+            {trending.slice(0, 5).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setHeroIndex(i)}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  i === heroIndex ? 'w-12 bg-white' : 'w-8 bg-white/40 hover:bg-white/60'
+                }`}
+              />
+            ))}
           </div>
         )}
       </div>
     );
   }
+
+  if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#0a1020] via-[#101a2b] to-[#181f2e] text-white flex flex-col">
-      <header className="w-full px-2 sm:px-4 md:px-8 py-3 md:py-6 flex items-center justify-between relative z-30 bg-transparent">
-        <Image src="/logo/logo.png" alt="Rusil Stream Logo" width={120} height={38} className="w-[90px] h-[28px] md:w-[120px] md:h-[38px] object-contain" />
-        {/* Hamburger for mobile */}
-        <button
-          className="md:hidden ml-2 p-2 rounded focus:outline-none"
-          onClick={() => setNavOpen(v => !v)}
-          aria-label="Open navigation menu"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 flex-1 justify-end">
-          <form onSubmit={handleSearch} className="flex-1 max-w-xs md:max-w-lg mx-2 md:mx-8 flex items-center gap-2 md:gap-3">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="flex-1 px-2 py-1 md:px-5 md:py-2 rounded-lg bg-[#181f2e] text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#E50914] placeholder-gray-400 shadow"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-            <button type="submit" className="bg-[#E50914] hover:bg-[#b0060f] text-white font-bold px-2 py-1 md:px-5 md:py-2 rounded-lg transition flex items-center gap-1 md:gap-2 text-xs md:text-base">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-              </svg>
-              <span className="hidden md:inline">Search</span>
-            </button>
-          </form>
-          <Link href="/" className="text-lg font-bold hover:underline">Home</Link>
-          <div className="relative ml-4">
-            <ProfileDropdown onLogout={handleLogout} />
-          </div>
-        </nav>
-        {/* Mobile nav overlay */}
-        {navOpen && (
-          <div className="fixed inset-0 bg-black/80 z-40 flex flex-col items-center justify-start pt-20 gap-8 animate-fade-in md:hidden">
-            <form onSubmit={handleSearch} className="w-11/12 flex items-center gap-2 mb-2">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="flex-1 px-3 py-2 rounded-lg bg-[#181f2e] text-white text-base focus:outline-none focus:ring-2 focus:ring-[#E50914] placeholder-gray-400 shadow"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              <button type="submit" className="bg-[#E50914] hover:bg-[#b0060f] text-white font-bold px-4 py-2 rounded-lg transition flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-                </svg>
-                Search
-              </button>
-            </form>
-            <Link href="/" className="text-lg font-bold hover:underline" onClick={() => setNavOpen(false)}>Home</Link>
-            <div className="relative">
-              <ProfileDropdown onLogout={() => { setNavOpen(false); handleLogout(); }} />
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#0a0a0a]/98 backdrop-blur-xl shadow-2xl" : "bg-gradient-to-b from-black/90 via-black/50 to-transparent"}`}>
+        <div className="flex items-center justify-between px-4 md:px-12 py-5">
+          <div className="flex items-center gap-10">
+            <Link href="/home">
+              <Logo className="text-3xl md:text-4xl" />
+            </Link>
+            
+            <div className="hidden lg:flex items-center gap-7 text-sm font-semibold">
+              <Link href="/home" className="text-white hover:text-gray-300 transition">Home</Link>
+              <Link href="/movies" className="text-gray-400 hover:text-gray-300 transition">Movies</Link>
+              <Link href="/tv-shows" className="text-gray-400 hover:text-gray-300 transition">TV Shows</Link>
+              <Link href="/my-list" className="text-gray-400 hover:text-gray-300 transition">My List</Link>
             </div>
-            <button className="absolute top-4 right-4 p-2" onClick={() => setNavOpen(false)} aria-label="Close menu">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7 text-white">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
-        )}
-      </header>
-      {/* Search Results Section */}
-      {searchTerm && (
-        <section className="w-full max-w-5xl mx-auto px-1 md:px-4 mt-2">
-          <div className="bg-[#101a2b] rounded-2xl shadow-2xl p-2 md:p-6">
-            {searchLoading ? (
-              <div className="text-center text-gray-300 py-8">Searching...</div>
-            ) : searchResults.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-6">
-                {searchResults.map(movie => (
-                  <Link
-                    key={movie.id}
-                    href={`/player/${movie.id}`}
-                    className="group flex flex-col items-center bg-[#181f2e] rounded-lg p-1 md:p-3 hover:bg-[#232b3a] transition shadow-lg"
+
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {searchOpen ? (
+                <div className="flex items-center gap-2 bg-black/80 border border-white/30 rounded-xl px-4 py-2.5 backdrop-blur-md">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-transparent text-white placeholder-gray-400 outline-none w-48 md:w-64"
+                    autoFocus
+                  />
+                  <button onClick={() => { setSearchOpen(false); setSearchTerm(""); setSearchResults([]); }}>
+                    <svg className="w-5 h-5 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="p-2.5 hover:bg-white/10 rounded-full transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center gap-2 hover:opacity-80 transition"
+              >
+                {profilePic ? (
+                  <img src={profilePic} alt={profileName} className="w-9 h-9 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold shadow-lg">
+                    {profileName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <svg className={`w-4 h-4 transition-transform ${profileMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-3 w-60 bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2">
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <p className="text-sm font-semibold text-white">{profileName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); router.push("/profiles"); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
                   >
-                    <img
-                      src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-                      alt={movie.title}
-                      className="w-16 h-24 md:w-24 md:h-36 object-cover rounded mb-1 md:mb-2 shadow"
-                    />
-                    <span className="text-white text-xs md:text-base font-semibold text-center line-clamp-2">{movie.title}</span>
-                    <span className="text-xs text-gray-400">{movie.release_date?.slice(0,4)}</span>
-                  </Link>
+                    Switch Profile
+                  </button>
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); router.push("/settings"); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
+                  >
+                    Account Settings
+                  </button>
+                  <div className="border-t border-white/10 mt-2 pt-2">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {searchTerm && (
+        <div className="fixed inset-0 bg-black/97 z-40 pt-28 overflow-y-auto backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 md:px-12 py-8">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Search Results for "{searchTerm}"</h2>
+              <button
+                onClick={() => { setSearchTerm(""); setSearchResults([]); setSearchOpen(false); }}
+                className="text-gray-400 hover:text-white p-2"
+              >
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {searchLoading ? (
+              <div className="text-center py-20">
+                <div className="inline-block w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {searchResults.map((item) => (
+                  <ContentCard key={`${item.id}-${item.media_type}`} item={item} />
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-400 py-8">No results found.</div>
+              <div className="text-center py-20 text-gray-400 text-xl">
+                No results found
+              </div>
             )}
-          </div>
-        </section>
-      )}
-      <main className="flex-1 w-full px-0 md:px-12 max-w-[1600px] mx-auto">
-        {loading ? (
-          <Loading />
-        ) : (
-          <>
-            <HeroBannerCarousel movies={trending} />
-            <Carousel title="Trending Now" movies={trending} />
-            <Carousel title="Top Rated" movies={topRated} />
-            <Carousel title="Action Movies" movies={action} />
-            <Carousel title="Family Movies" movies={family} />
-            <Carousel title="Horror Movies" movies={horror} />
-            <Carousel title="Editor's Picks" movies={editors} />
-          </>
-        )}
-      </main>
-      {showWelcome && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 md:p-8">
-          <div className="relative flex flex-col items-center gap-4 bg-black/70 border border-[#E50914] rounded-2xl shadow-2xl p-8 w-full max-w-md mb-8 transition-all duration-300" style={{backdropFilter: 'blur(8px)'}}>
-            <button
-              onClick={() => setShowWelcome(false)}
-              className="absolute top-2 right-2 text-white text-2xl hover:text-[#E50914] focus:outline-none"
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            {profilePic ? (
-              <Image src={profilePic} alt="Profile" width={80} height={80} className="rounded-full border-2 border-[#E50914] bg-white/10 object-cover" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-3xl font-bold border-2 border-[#E50914]">{username[0] ? username[0].toUpperCase() : "U"}</div>
-            )}
-            <h1 className="text-2xl font-bold">Welcome, {username}!</h1>
-            <a href="/settings" className="text-[#E50914] hover:underline">Profile Settings</a>
-            <form method="POST" action="/api/logout" className="mt-4">
-              <button type="submit" className="bg-[#E50914] hover:bg-[#b0060f] text-white font-bold py-2 px-6 rounded-lg transition">Logout</button>
-            </form>
           </div>
         </div>
       )}
+
+      <main className="pt-16">
+        <PremiumHero />
+        
+        {continueWatching.length > 0 && (
+          <Carousel title="Continue Watching" items={continueWatching} showProgress={true} />
+        )}
+        
+        {myList.length > 0 && (
+          <Carousel title="My List" items={myList} />
+        )}
+        
+        <Carousel title="Trending Now" items={trending} />
+        <Carousel title="Popular Movies" items={movies} />
+        <Carousel title="Popular TV Shows" items={tvShows} />
+        <Carousel title="Top Rated" items={topRated} />
+      </main>
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }
-
-// Add no-scrollbar utility to your global CSS:
-// .no-scrollbar::-webkit-scrollbar { display: none; }
-// .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
