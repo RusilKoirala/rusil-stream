@@ -51,10 +51,8 @@ export default function LoginPage() {
         const data = await res.json();
 
         if (res.ok) {
-          // Store JWT token in localStorage
-          if (data.token) {
-            localStorage.setItem("jwt_token", data.token);
-          }
+          // JWT token is automatically set in httpOnly cookie by the server
+          // No need to store in localStorage - middleware will handle authentication
           router.replace("/profiles");
         } else {
           setError(data.error || "Login failed");
@@ -82,14 +80,14 @@ export default function LoginPage() {
       </div>
 
       {/* Logo at top */}
-      <div className="absolute top-8 left-8">
-        <Logo className="text-4xl" />
+      <div className="absolute top-4 md:top-8 left-4 md:left-8">
+        <Logo className="text-2xl md:text-3xl" />
       </div>
 
       {/* Login/Signup Card */}
       <div className="w-full max-w-md">
-        <div className="bg-black/75 backdrop-blur-md rounded-2xl p-8 md:p-12 shadow-2xl border border-white/10">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-8">
+        <div className="bg-black/75 backdrop-blur-md rounded-2xl p-6 md:p-8 lg:p-12 shadow-2xl border border-white/10">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-6 md:mb-8">
             {isSignup ? "Create Account" : "Sign In"}
           </h1>
 

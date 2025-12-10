@@ -12,6 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Rusil Stream - Watch Movies & TV Shows Online",
   description: "Stream unlimited movies and TV shows on Rusil Stream. Educational streaming platform built with Next.js, MongoDB, and TMDB API. Watch anywhere, anytime.",
   keywords: "streaming, movies, tv shows, watch online, rusil stream, netflix alternative, educational project",

@@ -32,10 +32,8 @@ function VerifyEmailContent() {
           setStatus("success");
           setMessage("Email verified successfully! Redirecting...");
           
-          // Store JWT token if needed in localStorage (optional)
-          if (data.token) {
-            localStorage.setItem("jwt_token", data.token);
-          }
+          // JWT token is automatically set in httpOnly cookie by the server
+          // No need to store in localStorage
           
           // Redirect to profiles page after 2 seconds
           setTimeout(() => {

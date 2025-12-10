@@ -1,11 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "../components/Logo";
+import Loading from "../components/Loading";
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const router = useRouter();
 
   const heroSlides = [
     {
@@ -25,6 +29,24 @@ export default function LandingPage() {
     }
   ];
 
+  // Auto-redirect if authenticated
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          // User is authenticated, redirect to home
+          router.replace("/home");
+          return;
+        }
+      } catch (error) {
+        // User not authenticated, stay on landing page
+      }
+      setIsCheckingAuth(false);
+    }
+    checkAuth();
+  }, [router]);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
@@ -38,15 +60,20 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return <Loading />;
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Premium Navbar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-black/98 backdrop-blur-2xl" : "bg-transparent"}`}>
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between px-8 md:px-16 py-6">
-          <Logo className="text-4xl" />
+        <div className="max-w-[1800px] mx-auto flex items-center justify-between px-4 md:px-8 lg:px-16 py-4 md:py-6">
+          <Logo className="text-2xl md:text-3xl" />
           <Link
             href="/login"
-            className="px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-all duration-300 hover:scale-105"
+            className="px-4 md:px-8 py-2 md:py-3 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-all duration-300 hover:scale-105 text-sm md:text-base"
           >
             Sign In
           </Link>
@@ -75,35 +102,35 @@ export default function LandingPage() {
 
         {/* Content */}
         <div className="relative z-20 h-full flex items-center">
-          <div className="max-w-[1800px] mx-auto px-8 md:px-16 w-full">
-            <div className="max-w-3xl">
-              <div className="mb-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
+          <div className="max-w-[1800px] mx-auto px-4 md:px-8 lg:px-16 w-full">
+            <div className="max-w-4xl">
+              <div className="mb-4 md:mb-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 md:px-4 py-2 rounded-full border border-white/20">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Educational Project</span>
+                <span className="text-xs md:text-sm font-medium">Educational Project</span>
               </div>
               
-              <h1 className="text-6xl md:text-8xl font-black mb-6 leading-none">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black mb-4 md:mb-6 leading-tight">
                 {heroSlides[currentSlide].title}
               </h1>
               
-              <p className="text-2xl md:text-3xl text-gray-300 mb-12 font-light">
+              <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mb-8 md:mb-12 font-light">
                 {heroSlides[currentSlide].subtitle}
               </p>
               
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Link
                   href="/login"
-                  className="group px-12 py-5 bg-white text-black font-bold text-lg rounded-full hover:bg-gray-200 transition-all duration-300 flex items-center gap-3"
+                  className="group px-6 md:px-12 py-3 md:py-5 bg-white text-black font-bold text-base md:text-lg rounded-full hover:bg-gray-200 transition-all duration-300 flex items-center justify-center gap-3"
                 >
                   <span>Get Started</span>
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </Link>
                 
                 <Link
                   href="#learn-more"
-                  className="px-12 py-5 bg-white/10 backdrop-blur-md text-white font-bold text-lg rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
+                  className="px-6 md:px-12 py-3 md:py-5 bg-white/10 backdrop-blur-md text-white font-bold text-base md:text-lg rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
                 >
                   Learn More
                 </Link>

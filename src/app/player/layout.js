@@ -1,11 +1,14 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default function PlayerLayout({ children }) {
+export default async function PlayerLayout({ children }) {
   // SSR: check for auth cookie
-  const auth = cookies().get("rusil_auth");
-  if (!auth || auth.value !== "1") {
+  const cookieStore = await cookies();
+  const auth = cookieStore.get("rusil_session");
+  
+  if (!auth) {
     redirect("/login");
   }
+  
   return children;
 }

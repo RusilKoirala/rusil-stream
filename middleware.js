@@ -8,9 +8,14 @@ export function middleware(request) {
   const publicPaths = [
     "/",
     "/login",
+    "/verify-email",
+    "/dev-tools",
     "/api/auth/signup",
+    "/api/auth/send-verification",
+    "/api/auth/verify-email",
     "/api/login",
-    "/api/auth/logout"
+    "/api/auth/logout",
+    "/api/admin/pending-verifications"
   ];
   
   if (
