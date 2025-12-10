@@ -58,7 +58,17 @@ export async function POST(request) {
     }
 
     // Send verification email
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    // Auto-detect the base URL based on environment
+    let baseUrl = 'https://rusil-stream.vercel.app'
+    
+    if (!baseUrl) {
+      // Auto-detect based on headers if not set
+      const host = request.headers.get('host');
+      const protocol = request.headers.get('x-forwarded-proto') || 'http';
+      baseUrl = `${protocol}://${host}`;
+    }
+    
+    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
 
     console.log('Sending verification email to:', email);
     console.log('Verification URL:', verificationUrl);

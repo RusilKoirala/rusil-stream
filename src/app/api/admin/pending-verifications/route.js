@@ -17,9 +17,19 @@ export async function GET(request) {
       verificationToken: { $exists: true }
     }).select('email verificationToken verificationTokenExpiry createdAt');
 
+    // Auto-detect the base URL based on environment
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    
+    if (!baseUrl) {
+      // Auto-detect based on headers if not set
+      const host = request.headers.get('host');
+      const protocol = request.headers.get('x-forwarded-proto') || 'http';
+      baseUrl = `${protocol}://${host}`;
+    }
+
     const verifications = pendingUsers.map(user => ({
       email: user.email,
-      verificationUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email?token=${user.verificationToken}`,
+      verificationUrl: `${baseUrl}/verify-email?token=${user.verificationToken}`,
       expiresAt: user.verificationTokenExpiry,
       createdAt: user.createdAt
     }));
