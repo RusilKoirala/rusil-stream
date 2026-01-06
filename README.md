@@ -109,14 +109,6 @@ npm run dev
 
 6. Open [http://localhost:3000](http://localhost:3000)
 
-### Demo Credentials
-
-After seeding, you can login with:
-- **Email**: demo@rusilstream.com
-- **Password**: password123
-
-Or create a new account via the signup form.
-
 ## Environment Variables
 
 | Variable | Description | Required |
@@ -263,14 +255,6 @@ Or create a new account via the signup form.
   addedAt: Date
 }
 ```
-
-## Deployment
-
-### Quick Deploy to Vercel (5 minutes)
-
-See [QUICKSTART.md](./QUICKSTART.md) for a 5-minute deployment guide.
-
-For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ### Security Notes
 - ✅ Your API keys are **safe** in Vercel environment variables
