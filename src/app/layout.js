@@ -1,6 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
+import DevToolsSuppress from "@/components/DevToolsSuppress";
+import FirstVisitNotice from "@/components/FirstVisitNotice";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,6 +13,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#000000',
+};
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -70,7 +78,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-       <Analytics/>
+        {process.env.NODE_ENV === 'production' && <Analytics/>}
+        {process.env.NODE_ENV === 'development' && <DevToolsSuppress />}
+        <FirstVisitNotice />
         {children}
       </body>
     </html>

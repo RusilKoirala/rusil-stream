@@ -4,6 +4,7 @@ import { notFound, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Loading from "../../../components/Loading";
 import Logo from "../../../components/Logo";
+import MovieShareClient from "../../../components/MovieShareClient";
 
 export default function PlayerPage(props) {
   const params =
@@ -226,12 +227,10 @@ export default function PlayerPage(props) {
                 <span>{isSaved ? "In My List" : "Add to My List"}</span>
               </button>
               
-              <button className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-all">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                <span>Share</span>
-              </button>
+              <MovieShareClient 
+                url={`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/player/${params.id}`}
+                title={movie.title}
+              />
             </div>
           </div>
 
