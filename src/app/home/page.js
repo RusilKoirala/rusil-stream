@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Loading from "../../components/Loading";
-import Logo from "../../components/Logo";
+import AppNavbar from "../../components/AppNavbar";
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
@@ -20,28 +20,9 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const router = useRouter();
   const searchTimeoutRef = useRef(null);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (mobileMenuOpen && !event.target.closest('nav')) {
-        setMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [mobileMenuOpen]);
 
   useEffect(() => {
     async function init() {
@@ -334,133 +315,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#0a0a0a]/98 backdrop-blur-xl shadow-2xl" : "bg-gradient-to-b from-black/90 via-black/50 to-transparent"}`}>
-        <div className="flex items-center justify-between px-4 md:px-8 lg:px-12 py-4 md:py-5">
-          <div className="flex items-center gap-10">
-            <Link href="/home">
-              <Logo className="text-2xl md:text-3xl" />
-            </Link>
-            
-            <div className="hidden md:flex items-center gap-4 lg:gap-7 text-xs md:text-sm font-semibold">
-              <Link href="/home" className="text-white hover:text-gray-300 transition">Home</Link>
-              <Link href="/movies" className="text-gray-400 hover:text-gray-300 transition">Movies</Link>
-              <Link href="/tv-shows" className="text-gray-400 hover:text-gray-300 transition">TV Shows</Link>
-              <Link href="/my-list" className="text-gray-400 hover:text-gray-300 transition">My List</Link>
-            </div>
-            
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-white/10 rounded-full transition"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Search Button - Always shows as icon on mobile */}
-            <button
-              onClick={() => {
-                setSearchOpen(true);
-                setMobileMenuOpen(false);
-              }}
-              className="p-2.5 hover:bg-white/10 rounded-full transition"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setProfileMenuOpen(!profileMenuOpen);
-                  setMobileMenuOpen(false);
-                }}
-                className="flex items-center gap-2 hover:opacity-80 transition"
-              >
-                {profilePic ? (
-                  <img src={profilePic} alt={profileName} className="w-9 h-9 rounded-lg object-cover" />
-                ) : (
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold shadow-lg">
-                    {profileName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <svg className={`w-4 h-4 transition-transform ${profileMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {profileMenuOpen && (
-                <div className="absolute right-0 mt-3 w-60 bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2">
-                  <div className="px-4 py-3 border-b border-white/10">
-                    <p className="text-sm font-semibold text-white">{profileName}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{user?.email}</p>
-                  </div>
-                  <button
-                    onClick={() => { setProfileMenuOpen(false); router.push("/profiles"); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
-                  >
-                    Switch Profile
-                  </button>
-                  <button
-                    onClick={() => { setProfileMenuOpen(false); router.push("/settings"); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
-                  >
-                    Account Settings
-                  </button>
-                  <div className="border-t border-white/10 mt-2 pt-2">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-black/98 backdrop-blur-xl border-t border-white/10">
-            <div className="px-4 py-4 space-y-1">
-              <Link 
-                href="/home" 
-                className="block px-4 py-3 text-white font-semibold rounded-lg hover:bg-white/10 transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <Link 
-                href="/movies" 
-                className="block px-4 py-3 text-gray-400 font-semibold rounded-lg hover:bg-white/10 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Movies
-              </Link>
-              <Link 
-                href="/tv-shows" 
-                className="block px-4 py-3 text-gray-400 font-semibold rounded-lg hover:bg-white/10 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                TV Shows
-              </Link>
-              <Link 
-                href="/my-list" 
-                className="block px-4 py-3 text-gray-400 font-semibold rounded-lg hover:bg-white/10 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                My List
-              </Link>
-            </div>
-          </div>
-        )}
-      </nav>
+      <AppNavbar
+        profileName={profileName}
+        profilePic={profilePic}
+        userEmail={user?.email}
+        onSearchOpen={() => setSearchOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Search Modal */}
       {searchOpen && (

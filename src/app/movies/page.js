@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Loading from "../../components/Loading";
-import Logo from "../../components/Logo";
+import AppNavbar from "../../components/AppNavbar";
 
 export default function MoviesPage() {
   const [user, setUser] = useState(null);
@@ -14,14 +14,8 @@ export default function MoviesPage() {
   const [comedy, setComedy] = useState([]);
   const [horror, setHorror] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [scrolled, setScrolled] = useState(false);
+  const [profilePic, setProfilePic] = useState("");
   const router = useRouter();
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     async function init() {
@@ -43,6 +37,7 @@ export default function MoviesPage() {
         const profile = userData.user.profiles.find(p => p._id === profileId);
         if (profile) {
           setProfileName(profile.name);
+          setProfilePic(profile.avatarUrl || "");
         }
 
         const responses = await Promise.all([
@@ -68,6 +63,12 @@ export default function MoviesPage() {
     }
     init();
   }, [router]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    localStorage.removeItem("selectedProfileId");
+    router.push("/login");
+  }
 
   function MovieCard({ movie }) {
     return (
@@ -151,28 +152,12 @@ export default function MoviesPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#0a0a0a]/98 backdrop-blur-xl shadow-2xl" : "bg-gradient-to-b from-black/90 via-black/50 to-transparent"}`}>
-        <div className="flex items-center justify-between px-4 md:px-12 py-5">
-          <div className="flex items-center gap-10">
-            <Link href="/home">
-              <Logo className="text-3xl md:text-4xl" />
-            </Link>
-            
-            <div className="hidden lg:flex items-center gap-7 text-sm font-semibold">
-              <Link href="/home" className="text-gray-400 hover:text-gray-300 transition">Home</Link>
-              <Link href="/movies" className="text-white hover:text-gray-300 transition">Movies</Link>
-              <Link href="/tv-shows" className="text-gray-400 hover:text-gray-300 transition">TV Shows</Link>
-              <Link href="/my-list" className="text-gray-400 hover:text-gray-300 transition">My List</Link>
-            </div>
-          </div>
-
-          <Link href="/home" className="text-gray-400 hover:text-white transition">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </Link>
-        </div>
-      </nav>
+      <AppNavbar
+        profileName={profileName}
+        profilePic={profilePic}
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
 
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-12 mb-12">

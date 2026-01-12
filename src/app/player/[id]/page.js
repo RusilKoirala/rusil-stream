@@ -155,27 +155,37 @@ export default function PlayerPage(props) {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Premium Navbar - Only visible when controls shown */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${showControls ? "translate-y-0" : "-translate-y-full"}`}>
-        <div className="bg-gradient-to-b from-black/90 to-transparent backdrop-blur-sm">
-          <div className="flex items-center justify-between px-6 py-4">
+      {/* Minimal Navbar - Only visible on hover */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}`}>
+        <div className="bg-gradient-to-b from-black/95 via-black/70 to-transparent backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 md:px-8 py-3">
             <button
               onClick={() => router.push("/home")}
-              className="flex items-center gap-2 text-white hover:text-gray-300 transition group"
+              className="flex items-center gap-2 text-white/90 hover:text-white transition group"
             >
-              <svg className="w-6 h-6 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              <span className="text-lg font-medium">Back</span>
+              <span className="text-sm font-medium">Back</span>
             </button>
-            <Logo className="text-2xl" />
-            <div className="w-20" />
+            <Logo />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSaved}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                title={isSaved ? "Remove from My List" : "Add to My List"}
+              >
+                <svg className="w-5 h-5" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* Video Player */}
-      <div className="relative w-full aspect-video bg-black">
+      {/* Video Player - Full viewport */}
+      <div className="relative w-full h-screen bg-black">
         <iframe
           src={`https://vidsrc.to/embed/movie/${params.id}`}
           allowFullScreen
@@ -184,109 +194,89 @@ export default function PlayerPage(props) {
         />
       </div>
 
-      {/* Movie Details Section */}
-      <div className="relative">
-        {/* Backdrop gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0a0a] to-[#0a0a0a] pointer-events-none" />
-        
-        <div className="relative max-w-7xl mx-auto px-6 md:px-12 py-8 md:py-12">
-          {/* Title and Actions */}
+      {/* Movie Info Panel - Minimal Design */}
+      <div className="relative bg-gradient-to-b from-black to-[#0a0a0a]">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
+          {/* Title and Meta */}
           <div className="mb-8">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">{movie.title}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold mb-3">{movie.title}</h1>
             
-            <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm md:text-base text-gray-400">
               {movie.release_date && (
-                <span className="text-gray-400 text-lg">{movie.release_date.slice(0, 4)}</span>
+                <span>{movie.release_date.slice(0, 4)}</span>
               )}
               {movie.runtime && (
-                <span className="text-gray-400 text-lg">{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>
+                <span className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                </span>
               )}
               {movie.vote_average && (
-                <div className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1 rounded-full">
-                  <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                <span className="flex items-center gap-1.5 text-yellow-400">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  <span className="text-yellow-500 font-semibold">{movie.vote_average.toFixed(1)}</span>
-                </div>
+                  {movie.vote_average.toFixed(1)}
+                </span>
               )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={toggleSaved}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                  isSaved
-                    ? "bg-white text-black hover:bg-gray-200"
-                    : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
-                }`}
-              >
-                <svg className="w-5 h-5" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                <span>{isSaved ? "In My List" : "Add to My List"}</span>
-              </button>
-              
-              <MovieShareClient 
-                url={`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/player/${params.id}`}
-                title={movie.title}
-              />
+              {movie.genres && movie.genres.length > 0 && (
+                <span className="text-white/80">{movie.genres.slice(0, 2).map(g => g.name).join(" • ")}</span>
+              )}
             </div>
           </div>
 
-          {/* Overview and Details Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="md:col-span-2">
-              <h2 className="text-xl font-semibold mb-3">Overview</h2>
-              <p className="text-gray-300 text-lg leading-relaxed">
-                {movie.overview || "No description available."}
+          {/* Overview */}
+          {movie.overview && (
+            <div className="mb-8 max-w-3xl">
+              <p className="text-gray-300 leading-relaxed">
+                {movie.overview}
               </p>
             </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-3 mb-12">
+            <button
+              onClick={toggleSaved}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
+                isSaved
+                  ? "bg-white text-black hover:bg-gray-200"
+                  : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
+              }`}
+            >
+              <svg className="w-4 h-4" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span>{isSaved ? "Saved" : "My List"}</span>
+            </button>
             
-            <div className="space-y-4">
-              {movie.genres && movie.genres.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-400 mb-2">Genres</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {movie.genres.map((genre) => (
-                      <span key={genre.id} className="px-3 py-1 bg-white/10 rounded-full text-sm">
-                        {genre.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {movie.production_companies && movie.production_companies.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-400 mb-2">Production</h3>
-                  <p className="text-gray-300 text-sm">
-                    {movie.production_companies.slice(0, 2).map(c => c.name).join(", ")}
-                  </p>
-                </div>
-              )}
-            </div>
+            <MovieShareClient 
+              url={`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/player/${params.id}`}
+              title={movie.title}
+            />
           </div>
 
           {/* More Like This */}
           {similar.length > 0 && (
             <div>
-              <h2 className="text-2xl font-bold mb-6">More Like This</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {similar.map((movie) => (
+              <h2 className="text-xl md:text-2xl font-bold mb-6">More Like This</h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                {similar.map((item) => (
                   <button
-                    key={movie.id}
-                    onClick={() => router.push(`/player/${movie.id}`)}
-                    className="group relative aspect-[2/3] rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300"
+                    key={item.id}
+                    onClick={() => router.push(`/player/${item.id}`)}
+                    className="group relative aspect-[2/3] rounded-md overflow-hidden hover:scale-105 hover:z-10 transition-transform duration-200"
                   >
                     <img
-                      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                      alt={movie.title}
+                      src={`https://image.tmdb.org/t/p/w342${item.poster_path}`}
+                      alt={item.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className="text-sm font-semibold line-clamp-2">{movie.title}</h3>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <p className="text-xs font-medium line-clamp-2">{item.title}</p>
                       </div>
                     </div>
                   </button>
