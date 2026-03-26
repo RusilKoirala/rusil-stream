@@ -1,6 +1,19 @@
 // TMDB movies & TV API with caching
 import { NextResponse } from 'next/server';
-import { getTrending, getPopular, getTopRated, getMovieDetails, getTVDetails, getTVSeasonDetails, searchMovies, searchTV, searchMulti, getMoviesByGenre, getTVByGenre } from '../../../../lib/tmdb';
+import { getTrending, getPopular, getTopRated, getMovieDetails, getTVDetails, getTVSeasonDetails, searchMovies, searchTV, searchMulti, getMoviesByGenre, getTVByGenre } from '@/lib/tmdb';
+
+function getCacheControl({ query, id, tvId, season }) {
+  if (query) {
+    return 'public, s-maxage=300, stale-while-revalidate=600';
+  }
+  if (tvId && season) {
+    return 'public, s-maxage=1800, stale-while-revalidate=3600';
+  }
+  if (id) {
+    return 'public, s-maxage=1800, stale-while-revalidate=3600';
+  }
+  return 'public, s-maxage=900, stale-while-revalidate=1800';
+}
 
 export async function GET(request) {
   try {
@@ -53,7 +66,11 @@ export async function GET(request) {
       data = await getTrending('all', 'week', page);
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': getCacheControl({ query, id, tvId, season }),
+      },
+    });
   } catch (error) {
     console.error('TMDB API error:', error);
     return NextResponse.json(

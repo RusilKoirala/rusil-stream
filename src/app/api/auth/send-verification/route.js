@@ -1,8 +1,8 @@
 // Send verification email API
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import connectDB from '../../../../../lib/db';
-import User from '../../../../../models/User';
+import connectDB from '@/lib/db';
+import User from '@/models/User';
 import crypto from 'crypto';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -35,7 +35,7 @@ export async function POST(request) {
 
     // Store pending user data temporarily (we'll create user after verification)
     // For now, store in a temporary collection or use the same User model with emailVerified: false
-    const { hashPassword } = await import('../../../../../lib/auth');
+    const { hashPassword } = await import('@/lib/auth');
     const passwordHash = await hashPassword(password);
 
     if (existingUser && !existingUser.emailVerified) {

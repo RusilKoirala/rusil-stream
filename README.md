@@ -30,35 +30,117 @@ A full-stack, production-style streaming demo app built with Next.js, MongoDB, T
 - **State Management**: React hooks + localStorage
 - **Security**: bcryptjs for password hashing, JWT tokens
 
-## Architecture
+## Project Structure
 
 ```
-src/
-├── app/
-│   ├── api/              # API routes
-│   │   ├── auth/         # Authentication endpoints
-│   │   ├── movies/       # TMDB proxy with caching
-│   │   ├── history/      # Watch history
-│   │   ├── saved/        # Saved list
-│   │   ├── profile/      # Profile management
-│   │   └── stream/       # Stream URL proxy
-│   ├── home/             # Main browse page
-│   ├── login/            # Auth page
-│   ├── profiles/         # Profile selection
-│   ├── player/[id]/      # Video player
-│   └── settings/         # Account settings
-├── components/           # Reusable components
-lib/
-├── db.js                 # MongoDB connection
-├── auth.js               # Auth utilities
-└── tmdb.js               # TMDB API wrapper with caching
-models/
-├── User.js               # User schema with profiles
-├── WatchHistory.js       # Watch history schema
-└── SavedList.js          # Saved list schema
-scripts/
-└── seed.js               # Database seeding
+/
+├── src/
+│   ├── app/
+│   │   ├── (auth)/               # Auth route group — no URL prefix
+│   │   │   ├── login/            → /login
+│   │   │   └── verify-email/     → /verify-email
+│   │   ├── (main)/               # Main app route group — no URL prefix
+│   │   │   ├── home/             → /home
+│   │   │   ├── movies/           → /movies
+│   │   │   ├── movie/[id]/       → /movie/:id
+│   │   │   ├── tv-shows/         → /tv-shows
+│   │   │   ├── player/[id]/      → /player/:id
+│   │   │   ├── my-list/          → /my-list
+│   │   │   └── settings/         → /settings
+│   │   ├── (admin)/              # Admin route group — no URL prefix
+│   │   │   └── dev-tools/        → /dev-tools
+│   │   ├── api/                  # API routes (domain-grouped)
+│   │   │   ├── auth/             # Auth endpoints
+│   │   │   ├── login/            # Login endpoint
+│   │   │   ├── movies/           # TMDB proxy with caching
+│   │   │   ├── history/          # Watch history
+│   │   │   ├── saved/            # Saved list
+│   │   │   ├── profile/          # Profile management
+│   │   │   ├── stream/           # Stream URL proxy
+│   │   │   └── admin/            # Admin endpoints
+│   │   ├── profiles/             # Profile selection page
+│   │   ├── layout.js             # Root layout
+│   │   ├── page.js               # Root page (redirect)
+│   │   ├── globals.css
+│   │   ├── error.js
+│   │   ├── loading.js
+│   │   └── not-found.js
+│   ├── components/
+│   │   ├── layout/               # Navigation, headers, page shells
+│   │   │   ├── AppNavbar.jsx
+│   │   │   ├── Navbar.jsx
+│   │   │   └── Logo.jsx
+│   │   ├── media/                # Image, video, and content display
+│   │   │   ├── OptimizedImage.jsx
+│   │   │   └── SkeletonLoader.jsx
+│   │   ├── ui/                   # Generic, reusable UI primitives
+│   │   │   ├── Loading.js
+│   │   │   ├── LoadingSpinner.jsx
+│   │   │   └── DefaultProfileSVG.jsx
+│   │   ├── features/             # Feature-specific, page-coupled components
+│   │   │   ├── HomePageClient.jsx
+│   │   │   ├── MovieShareClient.jsx
+│   │   │   ├── FirstVisitNotice.jsx
+│   │   │   ├── PWAInstallPrompt.jsx
+│   │   │   ├── PushNotifications.jsx
+│   │   │   └── DevToolsSuppress.jsx
+│   │   └── index.js              # Barrel — re-exports all components
+│   ├── lib/
+│   │   ├── db.js                 # MongoDB connection
+│   │   ├── auth.js               # Auth utilities (JWT helpers)
+│   │   └── tmdb.js               # TMDB API wrapper with caching
+│   ├── models/
+│   │   ├── User.js               # User schema with profiles
+│   │   ├── WatchHistory.js       # Watch history schema
+│   │   └── SavedList.js          # Saved list schema
+│   └── middleware.js             # Next.js route middleware
+├── packages/
+│   └── shared/                   # Shared utilities (future cross-platform)
+│       ├── package.json          # @streaming-app/shared
+│       └── index.js              # Candidate exports for mobile/TV apps
+├── apps/                         # Future mobile/TV apps (see apps/README.md)
+├── scripts/                      # Dev/maintenance scripts
+│   └── seed.js
+└── public/                       # Static assets
 ```
+
+### Component Categories
+
+When adding a new component, pick the category that matches its responsibility:
+
+| Category | Folder | Use for |
+|---|---|---|
+| `layout` | `src/components/layout/` | Navigation bars, page shells, headers, footers — anything that wraps or frames content |
+| `media` | `src/components/media/` | Images, video players, thumbnails, skeleton loaders — anything that displays media |
+| `ui` | `src/components/ui/` | Generic, stateless primitives (spinners, icons, buttons) with no feature-specific logic |
+| `features` | `src/components/features/` | Components tightly coupled to a specific feature or page (home page client, share dialogs, etc.) |
+
+Import components via the barrel for clean paths:
+
+```js
+import { AppNavbar, LoadingSpinner, HomePageClient } from '@/components';
+// or directly from the subfolder:
+import AppNavbar from '@/components/layout/AppNavbar';
+```
+
+### Route Group Conventions
+
+Route groups use parentheses in the folder name and **do not affect URL paths**. Use them to co-locate related pages and share layouts without changing URLs.
+
+- `(auth)` — unauthenticated pages (login, signup, verify)
+- `(main)` — authenticated app pages (home, browse, player)
+- `(admin)` — admin-only pages
+
+To add a new page:
+1. Decide which group it belongs to (or create a new group if needed)
+2. Create `src/app/(group)/your-route/page.js`
+3. The URL will be `/your-route` — the group name is invisible to the router
+
+To add a shared layout for a group, create `src/app/(group)/layout.js`. It will wrap only the pages inside that group without affecting others.
+
+### API Route Conventions
+
+All API routes live under `src/app/api/` and are grouped by domain. When adding a new endpoint, place it under the matching domain folder (e.g., `src/app/api/auth/` for auth-related endpoints). See `src/app/api/README.md` for details.
 
 ## Getting Started
 

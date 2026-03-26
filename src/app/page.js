@@ -2,8 +2,96 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Logo from "../components/Logo";
-import Loading from "../components/Loading";
+import Image from "next/image";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clapperboard,
+  Clock3,
+  Download,
+  Heart,
+  Sparkles,
+  Tv2,
+} from "lucide-react";
+import Logo from "@/components/layout/Logo";
+import Loading from "@/components/ui/Loading";
+
+const HERO_SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1920&q=80",
+    title: "Stream Without Limits",
+    subtitle: "Thousands of movies and TV shows at your fingertips",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1574267432644-f610f5b7e4d1?w=1920&q=80",
+    title: "Watch Anywhere",
+    subtitle: "On your TV, phone, tablet, and more",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&q=80",
+    title: "Endless Entertainment",
+    subtitle: "New movies and shows added regularly",
+  },
+];
+
+const FEATURE_SPOTLIGHTS = [
+  {
+    title: "Watch on any device",
+    desc: "Stream on your TV, laptop, phone, and tablet. Pick up where you left off on any screen.",
+    image: "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&q=80",
+    alt: "Devices",
+  },
+  {
+    title: "Create profiles for everyone",
+    desc: "Up to 5 profiles with personalized recommendations and watch history for each family member.",
+    image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&q=80",
+    alt: "Profiles",
+    reverse: true,
+  },
+  {
+    title: "Download and watch offline",
+    desc: "Save your favorites and always have something to watch, even without an internet connection.",
+    image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80",
+    alt: "Offline",
+  },
+];
+
+const FEATURES = [
+  { icon: Clapperboard, title: "Unlimited Movies", desc: "Watch as many movies as you want" },
+  { icon: Tv2, title: "TV Shows", desc: "Binge-watch entire seasons" },
+  { icon: Sparkles, title: "Top Rated", desc: "Discover critically acclaimed content" },
+  { icon: CheckCircle2, title: "Trending", desc: "See what everyone's watching" },
+  { icon: Heart, title: "My List", desc: "Save your favorites" },
+  { icon: Clock3, title: "Continue Watching", desc: "Pick up where you left off" },
+];
+
+const FAQS = [
+  {
+    question: "What is Rusil Stream?",
+    answer:
+      "Rusil Stream is an educational streaming platform built to demonstrate modern web development practices using Next.js, MongoDB, and the TMDB API.",
+  },
+  {
+    question: "How many profiles can I create?",
+    answer:
+      "You can create up to 5 profiles per account. Each profile has its own personalized watch history, saved list, and recommendations.",
+  },
+  {
+    question: "Can I watch on multiple devices?",
+    answer:
+      "Yes! Rusil Stream works seamlessly across all your devices. Your watch progress syncs automatically.",
+  },
+  {
+    question: "Is this a real streaming service?",
+    answer:
+      "No, this is an educational project created for learning purposes. It demonstrates full-stack development, authentication, and API integration.",
+  },
+  {
+    question: "What technology stack is used?",
+    answer:
+      "Built with Next.js 13+ (App Router), React 18, MongoDB, JWT authentication, TMDB API, and Tailwind CSS.",
+  },
+];
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -11,25 +99,6 @@ export default function LandingPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
 
-  const heroSlides = [
-    {
-      image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1920&q=80",
-      title: "Stream Without Limits",
-      subtitle: "Thousands of movies and TV shows at your fingertips"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1574267432644-f610f5b7e4d1?w=1920&q=80",
-      title: "Watch Anywhere",
-      subtitle: "On your TV, phone, tablet, and more"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&q=80",
-      title: "Endless Entertainment",
-      subtitle: "New movies and shows added regularly"
-    }
-  ];
-
-  // Auto-redirect if authenticated
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -47,14 +116,27 @@ export default function LandingPage() {
   }, [router]);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
+    let isTicking = false;
+    const handleScroll = () => {
+      if (isTicking) {
+        return;
+      }
+      isTicking = true;
+      window.requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 20);
+        isTicking = false;
+      });
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+      if (document.visibilityState === "visible") {
+        setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -66,12 +148,18 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Navbar */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-black/95 backdrop-blur-xl" : "bg-transparent"}`}>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${
+          scrolled
+            ? "border-white/10 bg-black/80 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+            : "border-transparent bg-transparent"
+        }`}
+      >
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
           <Logo className="text-xl md:text-2xl" />
           <Link
             href="/login"
-            className="px-4 md:px-6 py-1.5 md:py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-all duration-200 text-sm"
+            className="px-4 md:px-6 py-1.5 md:py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-colors duration-200 text-sm"
           >
             Sign In
           </Link>
@@ -80,21 +168,25 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative h-screen w-full overflow-hidden">
-        {heroSlides.map((slide, index) => (
+        {HERO_SLIDES.map((slide, index) => (
           <div
             key={index}
             className={`absolute inset-0 transition-opacity duration-1000 ${
               index === currentSlide ? "opacity-100" : "opacity-0"
-            }`}
+            } will-change-[opacity] motion-reduce:transition-none`}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent z-10" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
-            <img
+            <Image
               src={slide.image}
               alt={slide.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+              fill
+                sizes="100vw"
+                priority={index === 0}
+                loading={index === 0 ? "eager" : "lazy"}
+                className="object-cover scale-[1.01]"
+              />
+            </div>
         ))}
 
         <div className="relative z-20 h-full flex items-center">
@@ -106,22 +198,20 @@ export default function LandingPage() {
               </div>
               
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 leading-tight tracking-tight">
-                {heroSlides[currentSlide].title}
+                {HERO_SLIDES[currentSlide].title}
               </h1>
               
               <p className="text-base sm:text-lg md:text-xl text-gray-400 mb-6 md:mb-8 font-normal">
-                {heroSlides[currentSlide].subtitle}
+                {HERO_SLIDES[currentSlide].subtitle}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/login"
-                  className="group px-6 md:px-8 py-2.5 md:py-3 bg-white text-black font-semibold text-sm rounded-full hover:bg-gray-100 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="group px-6 md:px-8 py-2.5 md:py-3 bg-white text-black font-semibold text-sm rounded-full hover:bg-gray-100 transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5"
                 >
                   <span>Get Started</span>
-                  <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 
                 <Link
@@ -137,9 +227,10 @@ export default function LandingPage() {
 
         {/* Slide Indicators */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-          {heroSlides.map((_, index) => (
+          {HERO_SLIDES.map((_, index) => (
             <button
               key={index}
+              aria-label={`Go to slide ${index + 1}`}
               onClick={() => setCurrentSlide(index)}
               className={`h-0.5 rounded-full transition-all duration-300 ${
                 index === currentSlide ? "w-8 bg-white" : "w-4 bg-white/30"
@@ -152,53 +243,33 @@ export default function LandingPage() {
       {/* Features Section */}
       <section id="learn-more" className="py-16 md:py-24 bg-gradient-to-b from-black to-neutral-950">
         <div className="max-w-6xl mx-auto px-4 md:px-6">
-          <div className="grid md:grid-cols-2 gap-10 items-center mb-16 md:mb-20">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-semibold mb-3 tracking-tight">Watch on any device</h2>
-              <p className="text-sm md:text-base text-gray-400 leading-relaxed">
-                Stream on your TV, laptop, phone, and tablet. Pick up where you left off on any screen.
-              </p>
+          {FEATURE_SPOTLIGHTS.map((feature, index) => (
+            <div
+              key={feature.title}
+              className={`grid md:grid-cols-2 gap-10 items-center ${
+                index < FEATURE_SPOTLIGHTS.length - 1 ? "mb-16 md:mb-20" : ""
+              }`}
+            >
+              <div className={feature.reverse ? "order-1 md:order-2" : ""}>
+                <h2 className="text-2xl md:text-3xl font-semibold mb-3 tracking-tight">{feature.title}</h2>
+                <p className="text-sm md:text-base text-gray-400 leading-relaxed">{feature.desc}</p>
+              </div>
+              <div
+                className={`relative aspect-video rounded-2xl overflow-hidden border border-white/10 bg-white/[0.02] ${
+                  feature.reverse ? "order-2 md:order-1" : ""
+                }`}
+              >
+                <Image
+                  src={feature.image}
+                  alt={feature.alt}
+                  fill
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  loading="lazy"
+                  className="object-cover"
+                />
+              </div>
             </div>
-            <div className="relative aspect-video rounded-xl overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&q=80"
-                alt="Devices"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-10 items-center mb-16 md:mb-20">
-            <div className="order-2 md:order-1 relative aspect-video rounded-xl overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&q=80"
-                alt="Profiles"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="order-1 md:order-2">
-              <h2 className="text-2xl md:text-3xl font-semibold mb-3 tracking-tight">Create profiles for everyone</h2>
-              <p className="text-sm md:text-base text-gray-400 leading-relaxed">
-                Up to 5 profiles with personalized recommendations and watch history for each family member.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-semibold mb-3 tracking-tight">Download and watch offline</h2>
-              <p className="text-sm md:text-base text-gray-400 leading-relaxed">
-                Save your favorites and always have something to watch, even without an internet connection.
-              </p>
-            </div>
-            <div className="relative aspect-video rounded-xl overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80"
-                alt="Offline"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -208,47 +279,21 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-semibold mb-10 text-center tracking-tight">Everything you need</h2>
           
           <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { 
-                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>,
-                title: "Unlimited Movies", 
-                desc: "Watch as many movies as you want" 
-              },
-              { 
-                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-                title: "TV Shows", 
-                desc: "Binge-watch entire seasons" 
-              },
-              { 
-                icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>,
-                title: "Top Rated", 
-                desc: "Discover critically acclaimed content" 
-              },
-              { 
-                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>,
-                title: "Trending", 
-                desc: "See what everyone's watching" 
-              },
-              { 
-                icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>,
-                title: "My List", 
-                desc: "Save your favorites" 
-              },
-              { 
-                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-                title: "Continue Watching", 
-                desc: "Pick up where you left off" 
-              }
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="p-5 bg-white/[0.02] rounded-lg border border-white/5 hover:border-white/10 transition-colors duration-200"
-              >
-                <div className="text-gray-400 mb-3">{feature.icon}</div>
-                <h3 className="text-sm font-medium mb-1">{feature.title}</h3>
-                <p className="text-xs text-gray-500">{feature.desc}</p>
-              </div>
-            ))}
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="group p-5 bg-white/[0.02] rounded-xl border border-white/8 hover:border-white/20 transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-gray-300 group-hover:text-white">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-medium mb-1">{feature.title}</h3>
+                  <p className="text-xs text-gray-500">{feature.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -259,37 +304,22 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center tracking-tight">
             Frequently Asked Questions
           </h2>
-          
+
           <div className="space-y-2">
-            {[
-              {
-                question: "What is Rusil Stream?",
-                answer: "Rusil Stream is an educational streaming platform built to demonstrate modern web development practices using Next.js, MongoDB, and the TMDB API."
-              },
-              {
-                question: "How many profiles can I create?",
-                answer: "You can create up to 5 profiles per account. Each profile has its own personalized watch history, saved list, and recommendations."
-              },
-              {
-                question: "Can I watch on multiple devices?",
-                answer: "Yes! Rusil Stream works seamlessly across all your devices. Your watch progress syncs automatically."
-              },
-              {
-                question: "Is this a real streaming service?",
-                answer: "No, this is an educational project created for learning purposes. It demonstrates full-stack development, authentication, and API integration."
-              },
-              {
-                question: "What technology stack is used?",
-                answer: "Built with Next.js 13+ (App Router), React 18, MongoDB, JWT authentication, TMDB API, and Tailwind CSS."
-              }
-            ].map((faq, index) => (
+            {FAQS.map((faq) => (
               <details
-                key={index}
+                key={faq.question}
                 className="group bg-white/[0.02] rounded-lg border border-white/5 overflow-hidden"
               >
                 <summary className="cursor-pointer p-4 flex items-center justify-between text-sm font-medium">
                   <span>{faq.question}</span>
-                  <svg className="w-4 h-4 flex-shrink-0 ml-4 text-gray-500 transition-transform group-open:rotate-45" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0 ml-4 text-gray-500 transition-transform group-open:rotate-45"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </summary>
@@ -313,9 +343,10 @@ export default function LandingPage() {
           </p>
           <Link
             href="/login"
-            className="inline-block px-8 py-2.5 bg-white text-black font-semibold text-sm rounded-full hover:bg-gray-100 transition-all duration-200"
+            className="group inline-flex items-center gap-2 px-8 py-2.5 bg-white text-black font-semibold text-sm rounded-full hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5"
           >
             Get Started
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
       </section>
@@ -324,15 +355,13 @@ export default function LandingPage() {
       <section className="py-12 bg-neutral-950/50 border-t border-white/5">
         <div className="max-w-2xl mx-auto px-4 md:px-6 text-center">
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 mb-4">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
+            <Download className="w-5 h-5 text-white" />
           </div>
-          
+
           <p className="text-xs text-gray-500 mb-3">
             Designed and developed by
           </p>
-          
+
           <a
             href="https://rusilkoirala.com.np"
             target="_blank"
@@ -340,22 +369,16 @@ export default function LandingPage() {
             className="group inline-flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors"
           >
             <span>Rusil Koirala</span>
-            <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </a>
-          
+
           <div className="mt-6 flex items-center justify-center gap-4 text-gray-600 text-xs">
             <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
+              <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Open Source</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Educational</span>
             </div>
           </div>

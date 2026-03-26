@@ -1,8 +1,8 @@
 // Watch history API routes
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../lib/db';
-import WatchHistory from '../../../../models/WatchHistory';
-import { getAuthUser } from '../../../../lib/auth';
+import connectDB from '@/lib/db';
+import WatchHistory from '@/models/WatchHistory';
+import { getAuthUser } from '@/lib/auth';
 
 // Get watch history for a profile
 export async function GET(request) {

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
-import Logo from "../components/Logo";
+import Logo from "@/components/layout/Logo";
 
 export default function Error({ error, reset }) {
   useEffect(() => {

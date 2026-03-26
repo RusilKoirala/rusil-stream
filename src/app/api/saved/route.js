@@ -1,8 +1,8 @@
 // Saved list (favorites/watchlist) API routes
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../lib/db';
-import SavedList from '../../../../models/SavedList';
-import { getAuthUser } from '../../../../lib/auth';
+import connectDB from '@/lib/db';
+import SavedList from '@/models/SavedList';
+import { getAuthUser } from '@/lib/auth';
 
 // Get saved list for a profile
 export async function GET(request) {

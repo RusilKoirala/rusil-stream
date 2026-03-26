@@ -1,8 +1,8 @@
 // Login API route with MongoDB
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../lib/db';
-import User from '../../../../models/User';
-import { verifyPassword, setAuthCookie } from '../../../../lib/auth';
+import connectDB from '@/lib/db';
+import User from '@/models/User';
+import { verifyPassword, setAuthCookie } from '@/lib/auth';
 
 export async function POST(request) {
   try {
@@ -43,7 +43,7 @@ export async function POST(request) {
 
     const token = await setAuthCookie(user._id.toString(), user.email);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: {
@@ -52,6 +52,16 @@ export async function POST(request) {
         profiles: user.profiles
       }
     });
+
+    response.cookies.set('rusil_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/'
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

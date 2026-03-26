@@ -37,6 +37,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Kiro
+.kiro/
+
 # IDE
 .vscode/
 .idea/

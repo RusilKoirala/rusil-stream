@@ -1,8 +1,8 @@
 // Verify email API
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../../lib/db';
-import User from '../../../../../models/User';
-import { setAuthCookie } from '../../../../../lib/auth';
+import connectDB from '@/lib/db';
+import User from '@/models/User';
+import { setAuthCookie } from '@/lib/auth';
 
 export async function POST(request) {
   try {

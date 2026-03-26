@@ -1,8 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
-import DevToolsSuppress from "@/components/DevToolsSuppress";
-import FirstVisitNotice from "@/components/FirstVisitNotice";
+import DevToolsSuppress from "@/components/features/DevToolsSuppress";
+import FirstVisitNotice from "@/components/features/FirstVisitNotice";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
