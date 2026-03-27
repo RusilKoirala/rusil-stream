@@ -3,14 +3,13 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 /**
- * Matches the web navbar logo exactly:
- * - Blue to cyan gradient rounded square with "RS" slightly rotated
- * - "Rusil" in white + "Stream" in blue-400
+ * TV-optimized logo with larger size and better visibility
+ * Matches the web navbar logo design
  */
-export default function Logo({ size = 1 }) {
-  const iconSize = 36 * size;
-  const fontSize = 20 * size;
-  const brandSize = 20 * size;
+export default function Logo({ size = 1.5 }) {
+  const iconSize = 48 * size;
+  const fontSize = 26 * size;
+  const brandSize = 28 * size;
 
   return (
     <View style={styles.container}>
@@ -20,7 +19,7 @@ export default function Logo({ size = 1 }) {
           colors={['#3b82f6', '#06b6d4']} // blue-500 to cyan-500
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.iconWrap, { width: iconSize, height: iconSize, borderRadius: 8 * size }]}
+          style={[styles.iconWrap, { width: iconSize, height: iconSize, borderRadius: 12 * size }]}
         >
           <Text style={[styles.iconText, { fontSize: fontSize, transform: [{ rotate: '-3deg' }] }]}>RS</Text>
         </LinearGradient>
@@ -41,14 +40,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 14,
   },
   iconRotate: {
     shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
   },
   iconWrap: {
     alignItems: 'center',

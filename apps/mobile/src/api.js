@@ -1,11 +1,11 @@
 import { createApiClient } from './lib/api';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.rusilstream.app';
+const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://rusilstream.app';
 
 async function getToken() {
   try {
-    return await SecureStore.getItemAsync('streaming_app_auth_token');
+    return await AsyncStorage.getItem('streaming_app_auth_token');
   } catch {
     return null;
   }

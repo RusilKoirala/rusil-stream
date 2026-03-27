@@ -10,7 +10,13 @@
   },
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/stream/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
+    {
+      "source": "/((?!api/stream).*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },

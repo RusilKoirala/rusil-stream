@@ -8,17 +8,39 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.rusilstream.app';
 
-// Injected JS — block popups only, allow data: and blob: for player internals
+// Comprehensive ad network blocklist
+const AD_DOMAINS = [
+  'popads.net', 'popcash.net', 'exoclick.com', 'adsterra.com',
+  'propellerads.com', 'tsyndicate.com', 'doubleclick.net',
+  'googlesyndication.com', 'adnxs.com', 'advertising.com',
+  'adsystem.com', 'adservice.com', 'ad-delivery.net',
+  'adform.net', 'advertising.com', 'adsrvr.org',
+  'outbrain.com', 'taboola.com', 'revcontent.com',
+  'mgid.com', 'contentabc.com', 'bidvertiser.com',
+];
+
+// Injected JS — block popups and click-redirect ads
 const INJECT_JS = `
 (function() {
-  var _open = window.open;
-  window.open = function(url) {
-    if (!url) return null;
-    var u = url.toString().toLowerCase();
-    var ads = ['popads','popcash','exoclick','adsterra','propellerads','tsyndicate','doubleclick'];
-    if (ads.some(function(d){ return u.indexOf(d) !== -1; })) return null;
-    return null; // block all new windows
-  };
+  // Block all new window/tab opens
+  window.open = function() { return null; };
+  window.alert = function() {};
+  window.confirm = function() { return false; };
+  window.prompt = function() { return null; };
+
+  // Push history state so back-nav stays here
+  history.pushState(null, '', window.location.href);
+  window.addEventListener('popstate', function() {
+    history.pushState(null, '', window.location.href);
+  });
+
+  // Intercept beforeunload to cancel redirects
+  window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
+  // Refocus after blur (pop-under prevention)
   window.addEventListener('blur', function() {
     setTimeout(function() { try { window.focus(); } catch(e) {} }, 100);
   });
@@ -95,18 +117,29 @@ export default function PlayerScreen({ route, navigation }) {
         onError={() => { setError(true); setLoading(false); }}
         onHttpError={() => { setError(true); setLoading(false); }}
         onShouldStartLoadWithRequest={(req) => {
-          const url = req.url.toLowerCase();
+          const url = req.url;
+          const lower = url.toLowerCase();
+
           // Always allow data: and blob: — used by players internally
-          if (url.startsWith('data:') || url.startsWith('blob:')) return true;
-          // Always allow our proxy
-          if (req.url.startsWith(BASE_URL)) return true;
-          // Block known ad networks
-          const blocked = [
-            'popads.net', 'popcash.net', 'exoclick.com', 'adsterra.com',
-            'propellerads.com', 'tsyndicate.com', 'doubleclick.net',
-            'googlesyndication.com',
-          ];
-          if (blocked.some(d => url.includes(d))) return false;
+          if (lower.startsWith('data:') || lower.startsWith('blob:')) return true;
+
+          // Always allow our proxy URL (initial load + reloads)
+          if (url.startsWith(BASE_URL)) return true;
+
+          // Block any URL containing ad network domains
+          if (AD_DOMAINS.some(d => lower.includes(d))) {
+            console.log('[AD BLOCKED]', url);
+            return false;
+          }
+
+          // For top-frame navigations, ONLY allow our proxy
+          // This is the nuclear option — any top-frame nav away from proxy = blocked
+          if (req.isTopFrame) {
+            console.log('[TOP-FRAME BLOCKED]', url);
+            return false;
+          }
+
+          // Allow sub-frame loads (player CDN, video chunks, etc.)
           return true;
         }}
         userAgent="Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"

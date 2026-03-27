@@ -9,7 +9,6 @@ export default function SplashScreen() {
   const scale = useRef(new Animated.Value(0.5)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
   const glowScale = useRef(new Animated.Value(0.8)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Main entrance animation
@@ -36,23 +35,7 @@ export default function SplashScreen() {
         tension: 30, 
         useNativeDriver: true 
       }),
-    ]).start(() => {
-      // Subtle pulse animation after entrance
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
+    ]).start();
   }, []);
 
   return (
@@ -82,13 +65,11 @@ export default function SplashScreen() {
       <Animated.View 
         style={{ 
           opacity, 
-          transform: [
-            { scale: Animated.multiply(scale, pulseAnim) }
-          ], 
+          transform: [{ scale }], 
           alignItems: 'center' 
         }}
       >
-        <Logo size={1.8} />
+        <Logo size={2} />
       </Animated.View>
     </View>
   );
@@ -103,18 +84,18 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    width: W * 0.7,
-    height: W * 0.7,
-    borderRadius: W * 0.35,
+    width: W * 0.4,
+    height: W * 0.4,
+    borderRadius: W * 0.2,
     backgroundColor: '#3b82f6',
-    opacity: 0.12,
+    opacity: 0.15,
   },
   glowSecondary: {
     position: 'absolute',
-    width: W * 0.5,
-    height: W * 0.5,
-    borderRadius: W * 0.25,
+    width: W * 0.3,
+    height: W * 0.3,
+    borderRadius: W * 0.15,
     backgroundColor: '#06b6d4',
-    opacity: 0.08,
+    opacity: 0.1,
   },
 });

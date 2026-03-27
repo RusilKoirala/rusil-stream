@@ -1,10 +1,27 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
+import { useState, useEffect } from "react";
 
-const ANDROID_APK_URL = "https://github.com/RusilKoirala/rusil-stream/releases/download/v1.0/rusilstream.apk";
-const ANDROID_TV_APK_URL = "#";
+const ANDROID_APK_URL = "/downloads/rusil-stream-mobile.apk";
+const ANDROID_TV_APK_URL = "/downloads/rusil-stream-tv.apk";
+
+function AndroidIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10">
+      <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85a.637.637 0 0 0-.83.22l-1.88 3.24a11.43 11.43 0 0 0-8.94 0L5.65 5.67a.643.643 0 0 0-.87-.2c-.28.18-.37.54-.22.83L6.4 9.48A10.81 10.81 0 0 0 1 18h22a10.81 10.81 0 0 0-5.4-8.52M7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5m10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5"/>
+    </svg>
+  );
+}
+
+function TvIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10">
+      <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+      <polyline points="17 2 12 7 7 2"/>
+    </svg>
+  );
+}
 
 function FeatureItem({ icon, text }) {
   return (
@@ -74,8 +91,8 @@ export default function DownloadPage() {
 
               <div className="relative">
                 {/* Android icon */}
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400/20 to-green-600/20 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/20">
-                  <Image src="/logo/android.png" alt="Android" width={40} height={40} className="object-contain" />
+                <div className="w-16 h-16 bg-gradient-to-br from-green-400/20 to-green-600/20 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/20 text-green-400 group-hover:scale-110 transition-transform duration-300">
+                  <AndroidIcon />
                 </div>
 
                 <div className="text-xs font-bold text-green-400 uppercase tracking-widest mb-2">Android Phone</div>
@@ -92,9 +109,9 @@ export default function DownloadPage() {
                 <a
                   href={ANDROID_APK_URL}
                   download
-                  className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-[1.02]"
+                  className="group/btn flex items-center justify-center gap-3 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover/btn:animate-bounce" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   Download APK
@@ -109,8 +126,8 @@ export default function DownloadPage() {
 
               <div className="relative">
                 {/* TV icon */}
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-purple-700/20 border border-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20">
-                  <Image src="/logo/tv.svg" alt="Android TV" width={40} height={40} className="object-contain" />
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-purple-700/20 border border-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20 text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                  <TvIcon />
                 </div>
 
                 <div className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2">Android TV</div>
@@ -127,9 +144,9 @@ export default function DownloadPage() {
                 <a
                   href={ANDROID_TV_APK_URL}
                   download
-                  className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02]"
+                  className="group/btn flex items-center justify-center gap-3 w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover/btn:animate-bounce" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   Download APK

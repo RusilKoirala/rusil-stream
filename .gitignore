@@ -7,19 +7,21 @@ node_modules/
 .next/
 out/
 .vercel
+next-env.d.ts
 
 # ── Build outputs ─────────────────────────────────────────────
 build/
 dist/
 *.tsbuildinfo
-next-env.d.ts
+*.apk
+*.aab
+apps/web/public/downloads/*.apk
+apps/web/public/downloads/*.aab
 
 # ── Expo / React Native ───────────────────────────────────────
 .expo/
-apps/mobile/dist/
 apps/mobile/android/
 apps/mobile/ios/
-apps/tv/dist/
 apps/tv/android/
 apps/tv/ios/
 
@@ -49,6 +51,9 @@ Thumbs.db
 *.bak
 *.pem
 
-# ── Misc ──────────────────────────────────────────────────────
+# ── Test / Coverage ───────────────────────────────────────────
 coverage/
+.nyc_output/
+
+# ── Kiro ──────────────────────────────────────────────────────
 .kiro/

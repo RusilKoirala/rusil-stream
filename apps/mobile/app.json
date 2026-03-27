@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rusil Stream",
     "slug": "rusil-stream",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/logo.png",
@@ -16,9 +16,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#000000"
-      },
-      "statusBarColor": "transparent",
-      "statusBarStyle": "light"
+      }
     },
     "newArchEnabled": true,
     "extra": {

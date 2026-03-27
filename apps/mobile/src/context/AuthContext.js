@@ -1,41 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decodeToken } from '../lib/api';
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'streaming_app_auth_token';
 const PROFILE_KEY = 'streaming_app_profile_id';
 
-async function secureGet(key) {
-  try {
-    const SS = await import('expo-secure-store');
-    return await SS.getItemAsync(key);
-  } catch { return null; }
-}
-
-async function secureSet(key, value) {
-  try {
-    const SS = await import('expo-secure-store');
-    await SS.setItemAsync(key, value);
-  } catch {}
-}
-
-async function secureDel(key) {
-  try {
-    const SS = await import('expo-secure-store');
-    await SS.deleteItemAsync(key);
-  } catch {}
-}
-
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);       // decoded JWT payload
-  const [profileId, setProfileId] = useState(null); // selected profile _id
+  const [user, setUser] = useState(null);
+  const [profileId, setProfileId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timeout = setTimeout(() => setLoading(false), 3000);
-    Promise.all([secureGet(STORAGE_KEY), secureGet(PROFILE_KEY)]).then(([stored, storedProfile]) => {
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(PROFILE_KEY),
+    ]).then(([stored, storedProfile]) => {
       clearTimeout(timeout);
       if (stored) {
         const decoded = decodeToken(stored);
@@ -46,29 +28,29 @@ export function AuthProvider({ children }) {
         }
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
     return () => clearTimeout(timeout);
   }, []);
 
   async function login(newToken, firstProfileId = null) {
-    await secureSet(STORAGE_KEY, newToken);
+    await AsyncStorage.setItem(STORAGE_KEY, newToken);
     const decoded = decodeToken(newToken);
     setToken(newToken);
     setUser(decoded);
     if (firstProfileId) {
-      await secureSet(PROFILE_KEY, firstProfileId);
+      await AsyncStorage.setItem(PROFILE_KEY, firstProfileId);
       setProfileId(firstProfileId);
     }
   }
 
   async function selectProfile(pid) {
-    await secureSet(PROFILE_KEY, pid);
+    await AsyncStorage.setItem(PROFILE_KEY, pid);
     setProfileId(pid);
   }
 
   async function logout() {
-    await secureDel(STORAGE_KEY);
-    await secureDel(PROFILE_KEY);
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    await AsyncStorage.removeItem(PROFILE_KEY);
     setToken(null);
     setUser(null);
     setProfileId(null);

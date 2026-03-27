@@ -10,7 +10,7 @@ import api from '../api';
 import Logo from '../components/Logo';
 
 const { width: W, height: H } = Dimensions.get('window');
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.rusilstream.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://rusilstream.app';
 
 function Field({ label, icon, value, onChangeText, placeholder, secureTextEntry, keyboardType, autoCapitalize }) {
   const [focused, setFocused] = useState(false);
@@ -51,6 +51,24 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   function switchMode(toSignup) {
     Animated.timing(slideAnim, {
@@ -114,24 +132,25 @@ export default function LoginScreen() {
       <View style={styles.blob2} />
 
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {/* Logo */}
-        <View style={styles.logoWrap}>
-          <Logo size={1.2} />
-          <Text style={styles.tagline}>Stream anything, anywhere</Text>
-        </View>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], width: '100%', alignItems: 'center' }}>
+          {/* Logo */}
+          <View style={styles.logoWrap}>
+            <Logo size={1.2} />
+            <Text style={styles.tagline}>Stream anything, anywhere</Text>
+          </View>
 
-        {/* Tab switcher */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity style={[styles.tab, !isSignup && styles.tabActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
-            <Text style={[styles.tabText, !isSignup && styles.tabTextActive]}>Sign In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, isSignup && styles.tabActive]} onPress={() => switchMode(true)} activeOpacity={0.8}>
-            <Text style={[styles.tabText, isSignup && styles.tabTextActive]}>Create Account</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Tab switcher */}
+          <View style={styles.tabRow}>
+            <TouchableOpacity style={[styles.tab, !isSignup && styles.tabActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
+              <Text style={[styles.tabText, !isSignup && styles.tabTextActive]}>Sign In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tab, isSignup && styles.tabActive]} onPress={() => switchMode(true)} activeOpacity={0.8}>
+              <Text style={[styles.tabText, isSignup && styles.tabTextActive]}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Card */}
-        <View style={styles.card}>
+          {/* Card */}
+          <View style={styles.card}>
           {isSignup && (
             <Field label="Your Name" icon="person-outline" value={name} onChangeText={setName} placeholder="Enter your name" autoCapitalize="words" />
           )}
@@ -170,6 +189,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.footer}>© 2025 Rusil Stream · Educational Project</Text>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

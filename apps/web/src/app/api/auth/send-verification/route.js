@@ -60,7 +60,7 @@ export async function POST(request) {
 
     // Send verification email
     // Auto-detect the base URL based on environment
-    let baseUrl = 'https://rusil-stream.vercel.app'
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rusilstream.app'
     
     if (!baseUrl) {
       // Auto-detect based on headers if not set
