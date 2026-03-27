@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Rusil Stream",
+    "slug": "rusil-stream",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "android": {
+      "package": "com.rusilstream.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#000000"
+      },
+      "statusBarColor": "transparent",
+      "statusBarStyle": "light"
+    },
+    "newArchEnabled": true,
+    "install": {
+      "exclude": ["typescript", "@types/react"]
+    }
+  }
+}
