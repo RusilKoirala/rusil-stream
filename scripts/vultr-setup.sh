@@ -116,10 +116,10 @@ echo "[deploy] Building..."
 cd apps/web && npm run build && cd ../..
 
 echo "[deploy] Restarting app..."
-pm2 restart rusilstream || pm2 start apps/web/node_modules/.bin/next \
+PORT=3000 pm2 restart rusilstream || PORT=3000 pm2 start npm \
   --name rusilstream \
-  --cwd apps/web \
-  -- start -p 3000
+  --cwd /var/www/rusilstream/apps/web \
+  -- run start -- --port 3000
 
 pm2 save
 echo "[deploy] Done!"
