@@ -1,11 +1,11 @@
 {
   "/api/admin/pending-verifications/route": "app/api/admin/pending-verifications/route.js",
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
   "/api/auth/me/route": "app/api/auth/me/route.js",
-  "/api/auth/signup/route": "app/api/auth/signup/route.js",
   "/api/auth/verify-email/route": "app/api/auth/verify-email/route.js",
-  "/api/history/route": "app/api/history/route.js",
   "/api/login/route": "app/api/login/route.js",
+  "/api/history/route": "app/api/history/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/signup/route": "app/api/auth/signup/route.js",
   "/api/movies/route": "app/api/movies/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/saved/route": "app/api/saved/route.js",
@@ -24,8 +24,8 @@
   "/(main)/settings/page": "app/(main)/settings/page.js",
   "/(main)/tv-shows/page": "app/(main)/tv-shows/page.js",
   "/download/page": "app/download/page.js",
-  "/page": "app/page.js",
   "/profiles/page": "app/profiles/page.js",
+  "/page": "app/page.js",
   "/(main)/player/[id]/page": "app/(main)/player/[id]/page.js",
   "/(main)/player/tv/[id]/page": "app/(main)/player/tv/[id]/page.js"
 }
