@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
 
 function decodeJWT(token) {
   try {
