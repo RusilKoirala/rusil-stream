@@ -1,56 +1,54 @@
-# Dependencies
+# ── Dependencies ──────────────────────────────────────────────
 node_modules/
-/.pnp
+.pnp
 .pnp.js
 
-# Testing
-/coverage
-
-# Next.js
-/.next/
+# ── Next.js ───────────────────────────────────────────────────
 .next/
-/out/
+out/
+.vercel
 
-# Production
-/build
+# ── Build outputs ─────────────────────────────────────────────
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
 
-# Misc
-.DS_Store
-*.pem
+# ── Expo / React Native ───────────────────────────────────────
+.expo/
+apps/mobile/dist/
+apps/mobile/android/
+apps/mobile/ios/
+apps/tv/dist/
+apps/tv/android/
+apps/tv/ios/
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Local env files
+# ── Env files ─────────────────────────────────────────────────
 .env
-.env*.local
 .env.local
+.env*.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Vercel
-.vercel
-.env
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-.env.local
-# Kiro
-.kiro/
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# IDE
+# ── OS / Editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-*.log
 *.tmp
 *.bak
-*.swp
-.DS_Store
-# OS
-Thumbs.db
+*.pem
+
+# ── Misc ──────────────────────────────────────────────────────
+coverage/
+.kiro/
