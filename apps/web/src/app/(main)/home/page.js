@@ -11,29 +11,43 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  await connectDB();
-  const userDoc = await User.findById(authUser.userId).select("email profiles");
-  if (!userDoc) {
+  let initialUser = { email: "", profiles: [] };
+  let initialTrending = [];
+  let initialMovies = [];
+
+  try {
+    await connectDB();
+    const userDoc = await User.findById(authUser.userId).select("email profiles");
+    if (!userDoc) {
+      redirect("/login");
+    }
+    initialUser = JSON.parse(
+      JSON.stringify({
+        email: userDoc.email,
+        profiles: userDoc.profiles || [],
+      })
+    );
+  } catch (e) {
+    console.error("HomePage DB error:", e);
     redirect("/login");
   }
 
-  const [trendingData, moviesData] = await Promise.all([
-    getTrending("all", "week", 1),
-    getPopular("movie", 1),
-  ]);
-
-  const initialUser = JSON.parse(
-    JSON.stringify({
-      email: userDoc.email,
-      profiles: userDoc.profiles || [],
-    })
-  );
+  try {
+    const [trendingData, moviesData] = await Promise.all([
+      getTrending("all", "week", 1),
+      getPopular("movie", 1),
+    ]);
+    initialTrending = trendingData?.results || [];
+    initialMovies = moviesData?.results || [];
+  } catch (e) {
+    console.error("HomePage TMDB error:", e);
+  }
 
   return (
     <HomePageClient
       initialUser={initialUser}
-      initialTrending={trendingData?.results || []}
-      initialMovies={moviesData?.results || []}
+      initialTrending={initialTrending}
+      initialMovies={initialMovies}
     />
   );
 }

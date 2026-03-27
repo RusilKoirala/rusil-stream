@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
 
-const ANDROID_APK_URL = "#";
+const ANDROID_APK_URL = "https://github.com/RusilKoirala/rusil-stream/releases/download/v1.0/rusilstream.apk";
 const ANDROID_TV_APK_URL = "#";
 
 function FeatureItem({ icon, text }) {

@@ -1,12 +1,3 @@
 {
-  "expo": {
-    "extra": {
-      "eas": {
-        "projectId": "d9f09e76-7643-4d60-a170-ba660bd9e180"
-      }
-    },
-    "android": {
-      "package": "com.rusilstream"
-    }
-  }
+  "name": "rusil-stream-monorepo"
 }

@@ -6,7 +6,6 @@
     "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/logo.png",
-    "entryPoint": "./index.js",
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",

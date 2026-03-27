@@ -48,6 +48,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Runtime env vars — passed via docker run -e or docker-compose
+ENV MONGODB_URI=""
+ENV TMDB_API_KEY=""
+ENV NEXTAUTH_SECRET=""
+ENV NEXT_PUBLIC_APP_URL="https://rusilstream.app"
+ENV RESEND_API_KEY=""
+ENV RESEND_FROM_EMAIL=""
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
