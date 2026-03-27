@@ -8,13 +8,13 @@
     "dev:turbo": "next dev --turbopack",
     "clean:next": "node scripts/clean-next-cache.js",
     "dev:clean": "npm run clean:next && next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
     "lint": "next lint",
     "seed": "node scripts/seed.js",
     "fix-indexes": "node scripts/fix-indexes.js",
     "reset-verification": "node scripts/reset-verification.js",
-    "vercel-build": "next build"
+    "vercel-build": "npm run build --workspace=apps/web"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4",
