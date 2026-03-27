@@ -16,6 +16,9 @@ dist/
 
 *.aab
 
+# APK files (served from GitHub releases)
+*.apk
+apps/web/public/downloads/*.apk
 apps/web/public/downloads/*.aab
 
 # ── Expo / React Native ───────────────────────────────────────

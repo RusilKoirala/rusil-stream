@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
-import { useState, useEffect } from "react";
 
-const ANDROID_APK_URL = "/api/download/mobile";
-const ANDROID_TV_APK_URL = "/api/download/tv";
+const ANDROID_APK_URL = "https://github.com/RusilKoirala/rusil-stream/releases/download/v1.0.1/rusil-stream-mobile.apk";
+const ANDROID_TV_APK_URL = "https://github.com/RusilKoirala/rusil-stream/releases/download/v1.0.1/rusil-stream-tv.apk";
 
 function AndroidIcon() {
   return (
@@ -23,7 +22,7 @@ function TvIcon() {
   );
 }
 
-function FeatureItem({ icon, text }) {
+function FeatureItem({ text }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -108,6 +107,7 @@ export default function DownloadPage() {
 
                 <a
                   href={ANDROID_APK_URL}
+                  download="rusil-stream-mobile.apk"
                   className="group/btn flex items-center justify-center gap-3 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <svg className="w-5 h-5 group-hover/btn:animate-bounce" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -142,6 +142,7 @@ export default function DownloadPage() {
 
                 <a
                   href={ANDROID_TV_APK_URL}
+                  download="rusil-stream-tv.apk"
                   className="group/btn flex items-center justify-center gap-3 w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <svg className="w-5 h-5 group-hover/btn:animate-bounce" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

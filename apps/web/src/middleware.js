@@ -28,6 +28,8 @@ export function middleware(request) {
     "/api/login",
     "/api/auth/logout",
     "/api/admin/pending-verifications",
+    "/api/download/mobile",
+    "/api/download/tv",
     "/manifest.json",
   ];
 
