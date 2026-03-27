@@ -4,27 +4,6 @@
     "appVersionSource": "local"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.rusilstream.app",
-        "EXPO_PUBLIC_WEB_URL": "https://rusilstream.app"
-      }
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.rusilstream.app",
-        "EXPO_PUBLIC_WEB_URL": "https://rusilstream.app"
-      }
-    },
     "production": {
       "android": {
         "buildType": "apk"
@@ -32,7 +11,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.rusilstream.app",
         "EXPO_PUBLIC_WEB_URL": "https://rusilstream.app"
-      }
+      },
+      "config": "eas.json"
     }
   },
   "submit": {

@@ -3,7 +3,9 @@
     "name": "Rusil Stream",
     "slug": "rusil-stream",
     "version": "1.0.0",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "splash": {
@@ -22,7 +24,15 @@
     },
     "newArchEnabled": true,
     "install": {
-      "exclude": ["typescript", "@types/react"]
+      "exclude": [
+        "typescript",
+        "@types/react"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3b0d1331-eeaf-4d9f-9ba1-9742b0ea2a40"
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { decodeToken } from '@streaming-app/shared';
+import * as SecureStore from 'expo-secure-store';
+import { decodeToken } from '../lib/api';
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'streaming_app_auth_token';
