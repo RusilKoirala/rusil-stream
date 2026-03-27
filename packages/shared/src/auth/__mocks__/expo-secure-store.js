@@ -1,0 +1,14 @@
+// In-memory mock for expo-secure-store (used in Jest tests)
+const store = new Map();
+
+export async function setItemAsync(key, value) {
+  store.set(key, value);
+}
+
+export async function getItemAsync(key) {
+  return store.get(key) ?? null;
+}
+
+export async function deleteItemAsync(key) {
+  store.delete(key);
+}

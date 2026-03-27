@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+.git
+.gitignore
+README.md
+apps/mobile
+apps/tv

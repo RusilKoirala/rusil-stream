@@ -1,0 +1,42 @@
+name: Deploy to Vultr
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VULTR_HOST }}
+          username: rusilstream
+          key: ${{ secrets.VULTR_SSH_KEY }}
+          script: |
+            bash ~/deploy.sh
+
+  mobile:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+      - name: Install deps
+        run: npm install
+        working-directory: apps/mobile
+      - name: Build APK
+        run: eas build --platform android --profile production --non-interactive --no-wait
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
