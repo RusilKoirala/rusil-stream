@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 function decodeJWT(token) {
   try {
     const payload = token.split(".")[1];
-    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString());
-    // Check expiry
+    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
     if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) return null;
     return decoded;
   } catch {
