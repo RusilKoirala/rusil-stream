@@ -13,9 +13,9 @@ next-env.d.ts
 build/
 dist/
 *.tsbuildinfo
-*.apk
+
 *.aab
-apps/web/public/downloads/*.apk
+
 apps/web/public/downloads/*.aab
 
 # ── Expo / React Native ───────────────────────────────────────
