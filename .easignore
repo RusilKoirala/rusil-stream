@@ -1,6 +1,0 @@
-apps/web
-apps/tv
-.next
-apps/web/node_modules
-apps/tv/node_modules
-apps/web/.next
