@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Rusil Stream",
+    "slug": "rusil-stream-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon-navbar-v2.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "rusilstream",
+    "splash": {
+      "image": "./assets/splash-logo-navbar-v2.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050505"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rusil.stream"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/splash-logo-navbar-v2.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.rusil.stream"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f2526021-3db7-4561-b3f4-822ba6dc559b"
+      }
+    }
+  }
+}
