@@ -2,105 +2,102 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useState } from "react";
-import { Linking, ScrollView, Text, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MenuRow } from "@/components/ui/menu-row";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import { ScreenReveal } from "@/components/ui/screen-reveal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getApiHealthInfo } from "@/lib/api";
+import { colors, space, radius, type as t } from "@/lib/tokens";
 
-async function openExternal(url: string): Promise<string | null> {
-  const supported = await Linking.canOpenURL(url);
-  if (!supported) {
-    return `Cannot open this link on your device`;
-  }
+async function openLink(url: string): Promise<string | null> {
+  const ok = await Linking.canOpenURL(url);
+  if (!ok) return "Cannot open this link on your device";
   await Linking.openURL(url);
   return null;
-}
-
-function ApiStatusDot({ status }: { status: "healthy" | "unhealthy" | "unknown" }) {
-  const color =
-    status === "healthy" ? "#22C55E" : status === "unhealthy" ? "#EF4444" : "#EAB308";
-  return (
-    <View
-      style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }}
-    />
-  );
-}
-
-function ApiStatusLabel({ status }: { status: "healthy" | "unhealthy" | "unknown" }) {
-  const label =
-    status === "healthy" ? "Healthy" : status === "unhealthy" ? "Unhealthy" : "Unknown";
-  const color =
-    status === "healthy" ? "#22C55E" : status === "unhealthy" ? "#EF4444" : "#EAB308";
-  return <Text style={{ color, fontSize: 14 }}>{label}</Text>;
 }
 
 export function HelpScreen() {
   const [linkErrors, setLinkErrors] = useState<Record<string, string>>({});
 
-  const { data: healthData } = useQuery({
+  const { data: health } = useQuery({
     queryKey: ["api-health"],
     queryFn: getApiHealthInfo,
     staleTime: 30_000,
   });
 
-  const apiStatus = healthData?.status ?? "unknown";
+  const apiStatus = health?.status ?? "unknown";
   const appVersion = Constants.expoConfig?.version ?? "—";
 
   async function handleLink(key: string, url: string) {
-    const error = await openExternal(url);
+    const err = await openLink(url);
     setLinkErrors((prev) => {
-      if (error) return { ...prev, [key]: error };
+      if (err) return { ...prev, [key]: err };
       const next = { ...prev };
       delete next[key];
       return next;
     });
   }
 
+  const statusColor =
+    apiStatus === "healthy" ? colors.success :
+    apiStatus === "unhealthy" ? colors.error : "#EAB308";
+
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-      <PremiumBackground />
-      <ScreenReveal className="flex-1">
-        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 24 }}>
-          <SectionHeader title="Help" subtitle="Get support or open help resources" />
+    <SafeAreaView style={s.root} edges={["top"]}>
+      <ScreenReveal style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+          <SectionHeader title="Help" subtitle="Support and resources" />
 
-          <View className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
-            <MenuRow label="Open Help Website" icon="globe-outline" external onPress={() => void handleLink("help-website", "https://rusil.me")} />
-            {linkErrors["help-website"] ? <Text className="px-4 pb-2 text-xs text-red-400">{linkErrors["help-website"]}</Text> : null}
-
-            <MenuRow label="Contact Support" icon="mail-outline" external onPress={() => void handleLink("contact-support", "mailto:support@rusil.me")} />
-            {linkErrors["contact-support"] ? <Text className="px-4 pb-2 text-xs text-red-400">{linkErrors["contact-support"]}</Text> : null}
-
-            <MenuRow label="FAQ and Documentation" icon="document-text-outline" external onPress={() => void handleLink("faq", "https://rusil.me/faq")} />
-            {linkErrors["faq"] ? <Text className="px-4 pb-2 text-xs text-red-400">{linkErrors["faq"]}</Text> : null}
-
-            <MenuRow label="Send Feedback" icon="chatbubble-outline" external onPress={() => void handleLink("send-feedback", "mailto:support@rusil.me?subject=Rusil%20Stream%20Feedback")} />
-            {linkErrors["send-feedback"] ? <Text className="px-4 pb-2 text-xs text-red-400">{linkErrors["send-feedback"]}</Text> : null}
-
-            <MenuRow label="Privacy Policy" icon="shield-checkmark-outline" external onPress={() => void handleLink("privacy-policy", "https://rusil.me/privacy")} showDivider={false} />
-            {linkErrors["privacy-policy"] ? <Text className="px-4 pb-2 text-xs text-red-400">{linkErrors["privacy-policy"]}</Text> : null}
+          {/* Links */}
+          <View style={s.card}>
+            {[
+              { key: "help",     label: "Help Website",       icon: "globe-outline" as const,          url: "https://rusil.me" },
+              { key: "support",  label: "Contact Support",    icon: "mail-outline" as const,           url: "mailto:support@rusil.me" },
+              { key: "faq",      label: "FAQ & Docs",         icon: "document-text-outline" as const,  url: "https://rusil.me/faq" },
+              { key: "feedback", label: "Send Feedback",      icon: "chatbubble-outline" as const,     url: "mailto:support@rusil.me?subject=Rusil%20Stream%20Feedback" },
+              { key: "privacy",  label: "Privacy Policy",     icon: "shield-checkmark-outline" as const, url: "https://rusil.me/privacy" },
+            ].map(({ key, label, icon, url }, i, arr) => (
+              <View key={key}>
+                <MenuRow
+                  label={label}
+                  icon={icon}
+                  external
+                  onPress={() => void handleLink(key, url)}
+                  showDivider={i < arr.length - 1}
+                />
+                {linkErrors[key] ? (
+                  <Text style={s.linkError}>{linkErrors[key]}</Text>
+                ) : null}
+              </View>
+            ))}
           </View>
 
-          <View className="mt-4 rounded-2xl border border-white/10 bg-[#0B0D12]">
-            <View className="flex-row items-center justify-between border-b border-white/10 px-4 py-4">
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="pulse-outline" size={18} color="#A1A1AA" />
-                <Text className="text-base text-zinc-200">API Status</Text>
+          {/* Status info */}
+          <View style={s.card}>
+            {/* API */}
+            <View style={s.infoRow}>
+              <View style={s.iconBox}>
+                <Ionicons name="pulse-outline" size={16} color={colors.text60} />
               </View>
-              <View className="flex-row items-center gap-2">
-                <ApiStatusDot status={apiStatus} />
-                <ApiStatusLabel status={apiStatus} />
+              <Text style={s.infoLabel}>API Status</Text>
+              <View style={s.infoRight}>
+                <View style={[s.dot, { backgroundColor: statusColor }]} />
+                <Text style={[s.infoValue, { color: statusColor }]}>
+                  {apiStatus.charAt(0).toUpperCase() + apiStatus.slice(1)}
+                </Text>
               </View>
             </View>
 
-            <View className="flex-row items-center justify-between px-4 py-4">
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="information-circle-outline" size={18} color="#A1A1AA" />
-                <Text className="text-base text-zinc-200">App Version</Text>
+            <View style={s.divider} />
+
+            {/* Version */}
+            <View style={s.infoRow}>
+              <View style={s.iconBox}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.text60} />
               </View>
-              <Text className="text-sm text-zinc-400">{appVersion}</Text>
+              <Text style={s.infoLabel}>App Version</Text>
+              <Text style={s.infoValue}>{appVersion}</Text>
             </View>
           </View>
         </ScrollView>
@@ -108,3 +105,65 @@ export function HelpScreen() {
     </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  root:  { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingBottom: 48, gap: space[3] },
+
+  card: {
+    marginHorizontal: space[4],
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+  },
+  linkError: {
+    fontSize: t.size.xs,
+    color: colors.error,
+    paddingHorizontal: space[4],
+    paddingBottom: space[2],
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[3],
+    paddingVertical: space[4],
+    paddingHorizontal: space[4],
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoLabel: {
+    flex: 1,
+    fontSize: t.size.base,
+    fontWeight: t.weight.medium,
+    color: colors.text80,
+  },
+  infoRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  infoValue: {
+    fontSize: t.size.sm,
+    fontWeight: t.weight.medium,
+    color: colors.text40,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginHorizontal: space[4],
+  },
+});

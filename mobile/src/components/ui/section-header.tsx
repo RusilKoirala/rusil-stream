@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { AnimatedPressable } from "@/components/ui/animated-pressable";
+import { colors, space, radius, type as t } from "@/lib/tokens";
 
 interface SectionHeaderProps {
   title: string;
@@ -18,22 +18,68 @@ export function SectionHeader({
   onRightPress,
 }: SectionHeaderProps) {
   return (
-    <View className="mb-2.5 flex-row items-end justify-between px-4">
-      <View className="flex-1 pr-3">
-        <Text className="text-[20px] font-bold tracking-tight text-white">{title}</Text>
-        {subtitle ? <Text className="mt-1 text-sm text-zinc-400">{subtitle}</Text> : null}
+    <View style={s.root}>
+      <View style={s.left}>
+        <Text style={s.title}>{title}</Text>
+        {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
       </View>
+
       {rightLabel && onRightPress ? (
-        <AnimatedPressable
+        <Pressable
           onPress={onRightPress}
-          className="flex-row items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1.5"
           accessibilityRole="button"
           accessibilityLabel={rightLabel}
+          style={({ pressed }) => [s.rightBtn, pressed && { opacity: 0.8 }]}
         >
-          <Text className="text-xs font-semibold uppercase tracking-[0.7px] text-zinc-300">{rightLabel}</Text>
-          <Ionicons name={rightIcon} size={12} color="#A1A1AA" />
-        </AnimatedPressable>
+          <Text style={s.rightLabel}>{rightLabel}</Text>
+          <Ionicons name={rightIcon} size={12} color={colors.text20} />
+        </Pressable>
       ) : null}
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  root: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingHorizontal: space[4],
+    paddingTop: space[2],
+    marginBottom: space[3],
+  },
+  left: {
+    flex: 1,
+    paddingRight: space[3],
+  },
+  title: {
+    fontSize: t.size.lg,
+    fontWeight: t.weight.bold,
+    color: colors.text100,
+    letterSpacing: t.tracking.tight,
+  },
+  subtitle: {
+    fontSize: t.size.xs,
+    color: colors.text40,
+    marginTop: space[1],
+    lineHeight: t.size.xs * 1.5,
+  },
+  rightBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: space[1],
+    paddingHorizontal: space[3],
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    backgroundColor: "transparent",
+  },
+  rightLabel: {
+    fontSize: 10,
+    fontWeight: t.weight.semibold,
+    color: colors.text40,
+    letterSpacing: t.tracking.wider,
+    textTransform: "uppercase",
+  },
+});

@@ -1,71 +1,128 @@
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, InteractionManager, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import Animated, {
-  interpolate,
-  Extrapolation,
-  useAnimatedRef,
-  useAnimatedStyle,
-  useScrollViewOffset,
-} from "react-native-reanimated";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import {
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { ContentRow } from "@/components/ui/content-row";
 import { HeroBanner } from "@/components/ui/hero-banner";
-import { OfflineBanner } from "@/components/ui/offline-banner";
-import { ScreenReveal } from "@/components/ui/screen-reveal";
+import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ui/content-card";
 import { SkeletonBox } from "@/components/ui/skeleton-box";
-import { getContentLogoPath, resolveApiAssetUrl } from "@/lib/api";
 import { useHomeContent } from "@/hooks/use-home-content";
-import { useNetworkStatus } from "@/hooks/use-network-status";
+import { colors, radius, space, type as t } from "@/lib/tokens";
 import type { RootStackParamList } from "@/navigation/types";
 import type { Content } from "@/types/content";
 
-const HOME_FILTERS = ["For You", "Movies", "TV"] as const;
-type HomeFilter = (typeof HOME_FILTERS)[number];
+const HOME_TABS = ["Home", "TV Shows", "Movies"] as const;
+type HomeTab = (typeof HOME_TABS)[number];
 
-/** Skeleton row: title bar + 4 card placeholders */
-function SkeletonContentRow() {
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+function BannerSkeleton() {
+  return <SkeletonBox height={360} borderRadius={0} />;
+}
+
+function RowSkeleton() {
   return (
-    <View className="mb-6">
-      {/* Title bar */}
-      <View className="mb-3 px-4">
-        <SkeletonBox height={18} width={140} borderRadius={6} />
-      </View>
-      {/* 4 card placeholders */}
-      <View className="flex-row gap-3 px-4">
-        {[0, 1, 2, 3].map((i) => (
-          <SkeletonBox key={i} width={110} height={165} borderRadius={8} />
+    <View style={s.skeletonSection}>
+      <SkeletonBox width={140} height={18} borderRadius={radius.xs} />
+      <View style={s.skeletonRow}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <SkeletonBox
+            key={`sk-${i}`}
+            width={CARD_WIDTH.row}
+            height={CARD_HEIGHT.row}
+            borderRadius={radius.md}
+          />
         ))}
       </View>
     </View>
   );
 }
 
-function HeroGateSkeleton() {
+const LoadingRows = memo(function LoadingRows() {
   return (
-    <View className="flex-1 bg-black">
-      <SkeletonBox height={500} borderRadius={0} />
-      <View className="px-4 pt-4">
-        <SkeletonContentRow />
-      </View>
+    <View>
+      <RowSkeleton />
+      <RowSkeleton />
+      <RowSkeleton />
+      <RowSkeleton />
+      <RowSkeleton />
     </View>
   );
-}
+});
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+const HomeTabs = memo(function HomeTabs({
+  selected,
+  onSelect,
+}: {
+  selected: HomeTab;
+  onSelect: (tab: HomeTab) => void;
+}) {
+  return (
+    <View style={s.tabsRow}>
+      {HOME_TABS.map((tab) => {
+        const active = tab === selected;
+        return (
+          <Pressable
+            key={tab}
+            onPress={() => onSelect(tab)}
+            style={[s.tabPill, active && s.tabPillActive]}
+            hitSlop={6}
+          >
+            <Text style={[s.tabLabel, active && s.tabLabelActive]}>{tab}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+});
+
+// ─── Header (logo + search button) ───────────────────────────────────────────
+
+const HomeTopBar = memo(function HomeTopBar({
+  onSearchPress,
+}: {
+  onSearchPress: () => void;
+}) {
+  return (
+    <View style={s.header}>
+      <View style={s.headerLeft}>
+        <BrandLogo size="sm" />
+        <Text style={s.headerTitle}>Rusil Stream</Text>
+      </View>
+      <Pressable
+        style={s.searchBtn}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Search"
+        onPress={onSearchPress}
+      >
+        <Ionicons name="search" color={colors.text100} size={16} />
+      </Pressable>
+    </View>
+  );
+});
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const insets = useSafeAreaInsets();
-  const [selectedFilter, setSelectedFilter] = useState<HomeFilter>("For You");
+  const [selectedTab, setSelectedTab] = useState<HomeTab>("Home");
   const [refreshing, setRefreshing] = useState(false);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [heroReadyItems, setHeroReadyItems] = useState<Content[]>([]);
-  const [heroLogoMap, setHeroLogoMap] = useState<Record<string, string>>({});
-  const { isOffline } = useNetworkStatus();
+  // Only allow pull-to-refresh when the scroll is at the very top
+  const [atTop, setAtTop] = useState(true);
 
   const {
     featured,
@@ -74,408 +131,266 @@ export function HomeScreen() {
     recommended,
     popularMovies,
     popularTV,
-    topRatedMovies,
+    topRated,
     newReleases,
-    isCoreLoading,
-    isRowsLoading,
     isLoading,
     isError,
     refetch,
   } = useHomeContent();
 
-  // Determine if we have any cached data to show
-  const hasCachedData = useMemo(
-    () =>
-      featured !== null ||
-      trending.length > 0 ||
-      continueWatching.length > 0 ||
-      recommended.length > 0 ||
-      popularMovies.length > 0 ||
-      popularTV.length > 0 ||
-      topRatedMovies.length > 0 ||
-      newReleases.length > 0,
-    [featured, trending, continueWatching, recommended, popularMovies, popularTV, topRatedMovies, newReleases]
-  );
-
-  const showSkeleton = isLoading && !hasCachedData;
-
-  const heroItems = useMemo(() => {
-    const seeded = [featured, ...trending, ...recommended, ...popularMovies]
-      .filter(Boolean) as Content[];
-    const unique = seeded.filter(
-      (item, index, arr) =>
-        arr.findIndex((x) => x.id === item.id && x.type === item.type) === index
-    );
-    return unique.slice(0, 6);
-  }, [featured, trending, recommended, popularMovies]);
-
-  useEffect(() => {
-    if (heroItems.length === 0) {
-      setHeroReadyItems([]);
-      setHeroLogoMap({});
-      return;
-    }
-
-    let cancelled = false;
-
-    const resolveHeroItemsWithLogo = async () => {
-      const checks = await Promise.all(
-        heroItems.map(async (item) => {
-          try {
-            const logoPath = await getContentLogoPath(item.id, item.type);
-            const resolvedLogo = resolveApiAssetUrl(logoPath);
-            return resolvedLogo
-              ? {
-                  item,
-                  key: `${item.type}:${item.id}`,
-                  logo: resolvedLogo,
-                }
-              : null;
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      if (cancelled) return;
-
-      const valid = checks.filter(
-        (entry): entry is { item: Content; key: string; logo: string } => Boolean(entry)
-      );
-      const nextLogoMap: Record<string, string> = {};
-      valid.forEach((entry) => {
-        nextLogoMap[entry.key] = entry.logo;
-      });
-      setHeroReadyItems(valid.map((entry) => entry.item));
-      setHeroLogoMap(nextLogoMap);
-    };
-
-    void resolveHeroItemsWithLogo();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [heroItems]);
-
+  // ── Tab filtering ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const byFilter = (items: Content[]) => {
-      if (selectedFilter === "Movies") return items.filter((item) => item.type === "movie");
-      if (selectedFilter === "TV") return items.filter((item) => item.type === "tv");
+    const filter = (items: Content[]) => {
+      if (selectedTab === "Movies")   return items.filter((i) => i.type === "movie");
+      if (selectedTab === "TV Shows") return items.filter((i) => i.type === "tv");
       return items;
     };
-
     return {
-      continueWatching: byFilter(continueWatching),
-      trending: byFilter(trending),
-      recommended: byFilter(recommended),
-      popularMovies: byFilter(popularMovies),
-      popularTV: byFilter(popularTV),
-      topRatedMovies: byFilter(topRatedMovies),
-      newReleases: byFilter(newReleases),
+      trending:         filter(trending),
+      continueWatching: filter(continueWatching),
+      recommended:      filter(recommended),
+      popularMovies:    filter(popularMovies),
+      popularTV:        filter(popularTV),
+      topRated:         filter(topRated),
+      newReleases:      filter(newReleases),
     };
-  }, [continueWatching, newReleases, popularMovies, popularTV, recommended, selectedFilter, topRatedMovies, trending]);
+  }, [selectedTab, trending, continueWatching, recommended, popularMovies, popularTV, topRated, newReleases]);
 
-  // Hero auto-rotation every 6s
-  useEffect(() => {
-    if (heroReadyItems.length <= 1) return;
-    const interval = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroReadyItems.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [heroReadyItems.length]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
-
+  // ── Callbacks ──────────────────────────────────────────────────────────────
   const openDetails = useCallback(
-    (item: Content) => {
-      navigation.navigate("Details", { id: item.id, type: item.type });
-    },
+    (item: Content) => navigation.navigate("Details", { id: item.id, type: item.type }),
     [navigation]
   );
 
-  // Reanimated scroll offset for floating top bar fade
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const scrollOffset = useScrollViewOffset(scrollRef);
-
-  useFocusEffect(
-    useCallback(() => {
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      const interaction = InteractionManager.runAfterInteractions(() => {
-        setHeroIndex(0);
-        scrollRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
-
-        // A second reset shortly after mount prevents stale preserved tab offsets.
-        timer = setTimeout(() => {
-          scrollRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
-        }, 120);
-      });
-
-      return () => {
-        if (timer) clearTimeout(timer);
-        interaction.cancel();
-      };
-    }, [scrollRef])
+  const openSearch = useCallback(
+    () => navigation.navigate("MainTabs" as never, { screen: "Search" } as never),
+    [navigation]
   );
 
-  useEffect(() => {
-    const heroPosters = (heroReadyItems.length > 0 ? heroReadyItems : heroItems)
-      .map((item) => item.backdropPath || item.posterPath)
-      .filter((path): path is string => Boolean(path));
+  const onFeaturedPlay = useCallback(() => {
+    if (!featured) return;
+    navigation.navigate("Player", { id: featured.id, type: featured.type, title: featured.title });
+  }, [featured, navigation]);
 
-    const rowImages = [
-      ...filtered.trending,
-      ...filtered.recommended,
-      ...filtered.popularMovies,
-      ...filtered.popularTV,
-    ]
-      .slice(0, 36)
-      .map((item) => item.posterPath || item.backdropPath)
-      .filter((path): path is string => Boolean(path));
+  const onFeaturedDetails = useCallback(() => {
+    if (featured) openDetails(featured);
+  }, [featured, openDetails]);
 
-    const uniqueUris = Array.from(new Set([...heroPosters, ...rowImages]));
-    uniqueUris.forEach((uri) => {
-      void Image.prefetch(uri);
-    });
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refetch(); } finally { setRefreshing(false); }
+  }, [refetch]);
 
-    (heroReadyItems.length > 0 ? heroReadyItems : heroItems).slice(0, 4).forEach((item) => {
-      void getContentLogoPath(item.id, item.type)
-        .then((path) => resolveApiAssetUrl(path))
-        .then((uri) => {
-          if (uri) {
-            void Image.prefetch(uri);
-          }
-        })
-        .catch(() => {
-          // Prefetch failures should never block rendering.
-        });
-    });
-  }, [filtered, heroItems, heroReadyItems]);
+  const onScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    setAtTop(e.nativeEvent.contentOffset.y <= 0);
+  }, []);
 
-  const topBarSolidStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollOffset.value, [0, 120], [0, 0.95], "clamp"),
-  }));
-
-  const heroParallaxStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(scrollOffset.value, [-140, 0, 260], [18, 0, -36], Extrapolation.CLAMP);
-    const scale = interpolate(scrollOffset.value, [-140, 0], [1.06, 1], Extrapolation.CLAMP);
-    return {
-      transform: [{ translateY }, { scale }],
-    };
-  });
-
-  const rows = useMemo(() => {
-    const candidates: Array<{
-      key: string;
-      title: string;
-      items: Content[];
-      showRanking?: boolean;
-      largeRanking?: boolean;
-    }> = [
-      { key: "recommended", title: "From Your Taste", items: filtered.recommended.slice(0, 14) },
-      { key: "newReleases", title: "New Releases", items: filtered.newReleases.slice(0, 16) },
-      { key: "trending", title: "Top 10 in Nepal Today", items: filtered.trending.slice(0, 10), showRanking: true, largeRanking: true },
-      { key: "continue", title: "Continue Watching", items: filtered.continueWatching },
-      { key: "popularMovies", title: "Popular Movies", items: filtered.popularMovies.slice(0, 16) },
-      { key: "popularTV", title: "Popular TV Shows", items: filtered.popularTV.slice(0, 16) },
-      { key: "topRated", title: "Top Rated Movies", items: filtered.topRatedMovies.slice(0, 16) },
-    ];
-
-    const seenSignatures = new Set<string>();
-
-    return candidates.filter((row) => {
-      if (row.items.length === 0) return false;
-      const signature = row.items
-        .slice(0, 10)
-        .map((item) => `${item.type}:${item.id}`)
-        .join("|");
-
-      if (!signature || seenSignatures.has(signature)) {
-        return false;
-      }
-
-      seenSignatures.add(signature);
-      return true;
-    });
-  }, [filtered]);
-
-  const hasTrending = filtered.trending.length > 0;
-  const hasHeroReady = heroReadyItems.length > 0;
-  const shouldBlockUntilHero = isCoreLoading || (!hasHeroReady && heroItems.length > 0);
-  const shouldShowTrendingOnly = hasHeroReady && (isRowsLoading || !hasTrending);
-
-  if (shouldBlockUntilHero) {
-    return (
-      <SafeAreaView className="flex-1 bg-black" edges={["top", "bottom"]}>
-        <StatusBar style="light" />
-        <HeroGateSkeleton />
-      </SafeAreaView>
-    );
-  }
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["bottom"]}>
+    <SafeAreaView style={s.screen} edges={["top"]}>
       <StatusBar style="light" />
-      <View style={{ position: "absolute", inset: 0, backgroundColor: "#000000" }} />
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        overScrollMode="never"
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={onScroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={atTop ? () => void onRefresh() : undefined}
+            enabled={atTop}
+            tintColor={colors.red}
+            colors={[colors.red]}
+          />
+        }
+      >
+        {/* ── Top bar (overlaid on banner when loaded) ───────────────── */}
+        <HomeTopBar onSearchPress={openSearch} />
 
-      {/* Overlay banner so hidden state does not reserve layout space */}
-      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: insets.top, zIndex: 30 }}>
-        <OfflineBanner visible={isOffline} />
-      </View>
+        {/* ── Hero banner ────────────────────────────────────────────── */}
+        {featured ? (
+          <HeroBanner
+            item={featured}
+            onPlay={onFeaturedPlay}
+            onMoreInfo={onFeaturedDetails}
+          />
+        ) : (
+          <BannerSkeleton />
+        )}
 
-      <ScreenReveal className="flex-1">
-        <Animated.ScrollView
-          ref={scrollRef}
-          className="flex-1"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void onRefresh()}
-              tintColor="#C7D5EA"
-            />
-          }
-          contentContainerStyle={{ paddingBottom: 28 }}
-          scrollEventThrottle={16}
-        >
-          {/* Floating top bar */}
-          <Animated.View
-            style={{ paddingTop: insets.top + 6, paddingBottom: 8 }}
-            className="absolute left-0 right-0 top-0 z-20 px-4"
-          >
-            <LinearGradient
-              colors={["rgba(0,0,0,0.85)", "rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]}
-              locations={[0, 0.64, 1]}
-              style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-              pointerEvents="none"
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[topBarSolidStyle, { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.78)" }]}
-            />
+        {/* ── Filter tabs ────────────────────────────────────────────── */}
+        <HomeTabs selected={selectedTab} onSelect={setSelectedTab} />
 
-            <View className="relative z-10 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <BrandLogo size="sm" styleVariant="web-navbar" />
-                <Text className="text-[10px] font-semibold uppercase tracking-[2.8px] text-white">Rusil Stream</Text>
-              </View>
-
-              <View className="flex-row items-center gap-2.5">
-                <Pressable
-                  className="rounded-full bg-black/35 p-2.5"
-                  onPress={() => navigation.navigate("AppSettings")}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Notifications"
-                >
-                  <Ionicons name="notifications-outline" size={16} color="#FFF" />
-                </Pressable>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Hero section */}
-          <Animated.View style={heroParallaxStyle}>
-            {heroReadyItems.length > 0 ? (
-              <HeroBanner
-                items={heroReadyItems}
-                activeIndex={heroIndex}
-                logoPathMap={heroLogoMap}
-                onPlay={(item) =>
-                  navigation.navigate("Player", {
-                    id: item.id,
-                    type: item.type,
-                    title: item.title,
-                  })
-                }
-                onMoreInfo={(item) => openDetails(item)}
-              />
-            ) : null}
-          </Animated.View>
-
-          <View className="mb-2 mt-0">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}
-            >
-              {HOME_FILTERS.map((filter) => {
-                const active = filter === selectedFilter;
-                return (
-                  <Pressable
-                    key={filter}
-                    onPress={() => setSelectedFilter(filter)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${filter} filter`}
-                    accessibilityState={{ selected: active }}
-                    className={`rounded-full border px-4 py-2 ${active ? "border-white/45 bg-white/14" : "border-white/18 bg-black/35"}`}
-                  >
-                    <Text className={`text-xs font-semibold uppercase tracking-[0.8px] ${active ? "text-white" : "text-white/80"}`}>
-                      {filter}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+        {/* ── Error notice ───────────────────────────────────────────── */}
+        {isError ? (
+          <View style={s.errorWrap}>
+            <Text style={s.errorText}>Some sections failed to load. Pull down to retry.</Text>
           </View>
+        ) : null}
 
-          {/* Content rows */}
-          <View className="mt-0">
-            {shouldShowTrendingOnly ? (
-              <>
-                <ContentRow
-                  title="Top 10 in Nepal Today"
-                  items={filtered.trending.slice(0, 10)}
-                  onPressItem={openDetails}
-                  showRanking
-                  largeRanking
-                  showCardTitle={false}
-                />
-                <View className="px-4 pb-8">
-                  <View className="mt-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-                    <SkeletonBox height={16} width={120} borderRadius={6} />
-                    <View className="mt-3 flex-row gap-3">
-                      <SkeletonBox height={165} width={110} borderRadius={8} />
-                      <SkeletonBox height={165} width={110} borderRadius={8} />
-                      <SkeletonBox height={165} width={110} borderRadius={8} />
-                    </View>
-                  </View>
-                </View>
-              </>
-            ) : showSkeleton ? (
-              <>
-                <SkeletonContentRow />
-                <SkeletonContentRow />
-              </>
-            ) : (
-              <>
-                {rows.map((row) => (
-                  <ContentRow
-                    key={row.key}
-                    title={row.title}
-                    items={row.items}
-                    onPressItem={openDetails}
-                    showRanking={row.showRanking}
-                    largeRanking={row.largeRanking}
-                    showCardTitle={false}
-                  />
-                ))}
-              </>
-            )}
-          </View>
+        {/* ── Content rows ───────────────────────────────────────────── */}
+        {isLoading ? (
+          <LoadingRows />
+        ) : (
+          <>
+            {/* Continue Watching — show progress bar, no title */}
+            <ContentRow
+              title="Continue Watching"
+              items={filtered.continueWatching}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
 
-          {isError ? (
-            <Text className="px-4 pt-4 text-sm text-red-400">
-              Some sections failed to load. Pull down to retry.
-            </Text>
-          ) : null}
-        </Animated.ScrollView>
-      </ScreenReveal>
+            {/* Trending Now */}
+            <ContentRow
+              title="Trending Now"
+              items={filtered.trending}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+
+            {/* New Releases */}
+            <ContentRow
+              title="New Releases"
+              items={filtered.newReleases}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+
+            {/* Popular Movies */}
+            <ContentRow
+              title="Popular Movies"
+              items={filtered.popularMovies}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+
+            {/* Popular TV */}
+            <ContentRow
+              title="Popular TV Shows"
+              items={filtered.popularTV}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+
+            {/* Top Rated */}
+            <ContentRow
+              title="Top Rated"
+              items={filtered.topRated}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+
+            {/* Recommended / Because You Watched */}
+            <ContentRow
+              title="Because You Watched"
+              items={filtered.recommended}
+              onPressItem={openDetails}
+              showCardTitle={false}
+            />
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    paddingBottom: space[8],
+  },
+
+  // Top bar
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: space[4],
+    paddingTop: space[2],
+    paddingBottom: space[3],
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[3],
+  },
+  headerTitle: {
+    fontSize: t.size.base,
+    fontWeight: t.weight.bold,
+    color: colors.text100,
+    letterSpacing: t.tracking.tight,
+  },
+  searchBtn: {
+    borderRadius: radius.full,
+    backgroundColor: colors.bgRaised,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: space[2] + 2,
+  },
+
+  // Tabs
+  tabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space[2],
+    paddingHorizontal: space[4],
+    paddingTop: space[4],
+    paddingBottom: space[2],
+  },
+  tabPill: {
+    paddingHorizontal: space[4],
+    paddingVertical: space[2],
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgSurface,
+  },
+  tabPillActive: {
+    backgroundColor: colors.redDim,
+    borderColor: "rgba(229,9,20,0.35)",
+  },
+  tabLabel: {
+    fontSize: t.size.sm,
+    fontWeight: t.weight.semibold,
+    color: colors.text60,
+  },
+  tabLabelActive: {
+    color: colors.red,
+  },
+
+  // Error
+  errorWrap: {
+    paddingHorizontal: space[4],
+    paddingTop: space[3],
+    paddingBottom: space[2],
+  },
+  errorText: {
+    fontSize: t.size.sm,
+    color: colors.error,
+  },
+
+  // Skeletons
+  skeletonSection: {
+    marginBottom: space[6],
+    gap: space[3],
+    paddingHorizontal: space[4],
+  },
+  skeletonRow: {
+    flexDirection: "row",
+    gap: space[2] + 2,
+  },
+});

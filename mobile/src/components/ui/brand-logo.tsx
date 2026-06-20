@@ -1,44 +1,46 @@
-import { Image, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import AppLogo from "@assets/logo.png";
 
 interface BrandLogoProps {
   size?: "sm" | "md" | "lg";
-  className?: string;
-  imageClassName?: string;
+  style?: object;
   styleVariant?: "default" | "web-navbar";
 }
 
-const SIZE_MAP = {
-  sm: { container: "h-11 w-11" },
-  md: { container: "h-14 w-14" },
-  lg: { container: "h-20 w-20" },
-} as const;
+const SIZE = { sm: 28, md: 36, lg: 48 } as const;
 
-export function BrandLogo({ size = "md", className = "", imageClassName = "", styleVariant = "web-navbar" }: BrandLogoProps) {
-  const preset = SIZE_MAP[size];
+export function BrandLogo({ size = "md", style, styleVariant = "web-navbar" }: BrandLogoProps) {
+  const px = SIZE[size];
 
   if (styleVariant === "web-navbar") {
     return (
-      <View className={`${preset.container} overflow-hidden rounded-2xl border border-white/25 bg-white p-0.5 shadow-floating ${className}`}>
-        <View className="h-full w-full items-center justify-center overflow-hidden rounded-[13px] bg-white/95">
-          <Image
-            source={AppLogo}
-            className={`h-full w-full ${imageClassName}`}
-            resizeMode="cover"
-            style={{ transform: [{ scale: 2.25 }] }}
-          />
-        </View>
+      <View style={[s.navbarWrap, { width: px, height: px }, style]}>
+        <Image source={AppLogo} style={s.navbarImage} resizeMode="cover" fadeDuration={0} />
       </View>
     );
   }
 
   return (
-    <View className={`${preset.container} ${className}`}>
-      <Image
-        source={AppLogo}
-        className={`h-full w-full ${imageClassName}`}
-        resizeMode="contain"
-      />
+    <View style={[{ width: px, height: px }, style]}>
+      <Image source={AppLogo} style={s.defaultImage} resizeMode="contain" fadeDuration={0} />
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  navbarWrap: {
+    overflow: "hidden",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "#fff",
+  },
+  navbarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  defaultImage: {
+    width: "100%",
+    height: "100%",
+  },
+});

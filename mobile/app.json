@@ -26,9 +26,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.rusil.stream"
     },
-    "plugins": [
-      "expo-font"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "f2526021-3db7-4561-b3f4-822ba6dc559b"

@@ -1,34 +1,23 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect } from "react";
-import { Platform } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
-  withSpring,
-} from "react-native-reanimated";
+import { Platform, StyleSheet, View } from "react-native";
 import { HomeScreen } from "@/screens/home-screen";
 import { SearchScreen } from "@/screens/search-screen";
 import { MyListScreen } from "@/screens/my-list-screen";
 import { ProfileScreen } from "@/screens/profile-screen";
 import type { MainTabParamList } from "@/navigation/types";
+import { colors, type as t } from "@/lib/tokens";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const tabConfig: Record<
+const TAB_CONFIG: Record<
   keyof MainTabParamList,
-  {
-    active: keyof typeof Ionicons.glyphMap;
-    inactive: keyof typeof Ionicons.glyphMap;
-    label: string;
-  }
+  { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap; label: string }
 > = {
-  Home: { active: "home", inactive: "home-outline", label: "Home" },
-  Search: { active: "search", inactive: "search-outline", label: "Search" },
-  MyList: { active: "bookmark", inactive: "bookmark-outline", label: "My List" },
-  Profile: { active: "person", inactive: "person-outline", label: "Profile" },
+  Home:    { active: "home",     inactive: "home-outline",     label: "Home" },
+  Search:  { active: "search",   inactive: "search-outline",   label: "Search" },
+  MyList:  { active: "bookmark", inactive: "bookmark-outline", label: "My List" },
+  Profile: { active: "person",   inactive: "person-outline",   label: "Profile" },
 };
 
 function TabIcon({
@@ -40,64 +29,55 @@ function TabIcon({
   focused: boolean;
   color: string;
 }) {
-  const pulse = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
-
-  useEffect(() => {
-    if (!focused) return;
-    pulse.value = withSequence(
-      withTiming(1.18, { duration: 120 }),
-      withSpring(1.0)
-    );
-  }, [focused, pulse]);
-
   return (
-    <Animated.View style={animatedStyle}>
+    <View style={tab.iconContainer}>
+      <View style={[tab.indicator, focused && tab.indicatorActive]} />
       <Ionicons name={name} size={22} color={color} />
-    </Animated.View>
+    </View>
   );
 }
 
 export function MainTabs() {
+  const TAB_HEIGHT = Platform.OS === "ios" ? 84 : 62;
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarShowLabel: true,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          height: Platform.OS === "ios" ? 86 : 66,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.09)",
-          backgroundColor: "#07090F",
-          paddingTop: 6,
-          paddingBottom: Platform.OS === "ios" ? 10 : 8,
-        },
-        sceneStyle: { backgroundColor: "#07090F" },
-        tabBarItemStyle: { paddingTop: 2, paddingBottom: 2 },
-        tabBarActiveTintColor: "#e50914",
-        tabBarInactiveTintColor: "#A4AFC2",
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "600",
-          letterSpacing: 0.3,
-          marginBottom: Platform.OS === "ios" ? -1 : 1,
-        },
-        tabBarIcon: ({ focused, color }) => {
-          const tab = tabConfig[route.name as keyof MainTabParamList];
-          return (
+      screenOptions={({ route }) => {
+        const cfg = TAB_CONFIG[route.name as keyof MainTabParamList];
+        return {
+          headerShown: false,
+          tabBarShowLabel: true,
+          tabBarHideOnKeyboard: true,
+          tabBarStyle: {
+            height: TAB_HEIGHT,
+            backgroundColor: "rgba(8,10,15,0.97)",
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.border,
+            elevation: 0,
+            shadowOpacity: 0,
+            paddingTop: 6,
+            paddingBottom: Platform.OS === "ios" ? 20 : 8,
+          },
+          sceneStyle: { backgroundColor: colors.bg },
+          tabBarItemStyle: { paddingHorizontal: 0 },
+          tabBarActiveTintColor: colors.text100,
+          tabBarInactiveTintColor: "rgba(255,255,255,0.30)",
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: t.weight.semibold,
+            letterSpacing: 0.3,
+            marginTop: 1,
+          },
+          tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              name={focused ? tab.active : tab.inactive}
+              name={focused ? cfg.active : cfg.inactive}
               focused={focused}
               color={color}
             />
-          );
-        },
-        tabBarLabel: tabConfig[route.name as keyof MainTabParamList].label,
-      })}
+          ),
+          tabBarLabel: cfg.label,
+        };
+      }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
@@ -106,3 +86,21 @@ export function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+const tab = StyleSheet.create({
+  iconContainer: {
+    alignItems: "center",
+    gap: 5,
+  },
+  indicator: {
+    position: "absolute",
+    top: -10,
+    width: 20,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "transparent",
+  },
+  indicatorActive: {
+    backgroundColor: colors.red,
+  },
+});

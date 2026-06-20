@@ -1,6 +1,7 @@
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
 import { AnimatedPressable } from "@/components/ui/animated-pressable";
+import { colors, space, radius, type as t } from "@/lib/tokens";
 
 interface MenuRowProps {
   label: string;
@@ -9,29 +10,87 @@ interface MenuRowProps {
   rightText?: string;
   external?: boolean;
   showDivider?: boolean;
+  destructive?: boolean;
 }
 
-export function MenuRow({ label, icon, onPress, rightText, external = false, showDivider = true }: MenuRowProps) {
+export function MenuRow({
+  label,
+  icon,
+  onPress,
+  rightText,
+  external = false,
+  showDivider = true,
+  destructive = false,
+}: MenuRowProps) {
   return (
     <>
       <AnimatedPressable
         onPress={onPress}
-        className="flex-row items-center justify-between px-4 py-4"
         accessibilityRole="button"
         accessibilityLabel={label}
+        style={s.row}
       >
-        <View className="flex-row items-center gap-3">
-          <View className="h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5">
-            <Ionicons name={icon} size={15} color="#B6BFCD" />
-          </View>
-          <Text className="text-base font-medium text-zinc-100">{label}</Text>
+        {/* Icon */}
+        <View style={s.iconWrap}>
+          <Ionicons name={icon} size={16} color={destructive ? colors.error : colors.text60} />
         </View>
-        <View className="flex-row items-center gap-2">
-          {rightText ? <Text className="text-xs uppercase tracking-[0.8px] text-zinc-500">{rightText}</Text> : null}
-          <Ionicons name={external ? "open-outline" : "chevron-forward"} size={14} color="#7C8494" />
+
+        {/* Label */}
+        <Text style={[s.label, destructive && { color: colors.error }]}>{label}</Text>
+
+        {/* Right side */}
+        <View style={s.right}>
+          {rightText ? <Text style={s.rightText}>{rightText}</Text> : null}
+          <Ionicons
+            name={external ? "open-outline" : "chevron-forward"}
+            size={14}
+            color={colors.text20}
+          />
         </View>
       </AnimatedPressable>
-      {showDivider ? <View className="mx-4 h-px bg-white/10" /> : null}
+
+      {showDivider && <View style={s.divider} />}
     </>
   );
 }
+
+const s = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: space[4],
+    paddingHorizontal: space[4],
+    gap: space[3],
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgHighest,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    flex: 1,
+    fontSize: t.size.base,
+    fontWeight: t.weight.medium,
+    color: colors.text80,
+  },
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+  },
+  rightText: {
+    fontSize: t.size.xs,
+    color: colors.text40,
+    fontWeight: t.weight.medium,
+    textTransform: "uppercase",
+    letterSpacing: t.tracking.wide,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginHorizontal: space[4],
+  },
+});

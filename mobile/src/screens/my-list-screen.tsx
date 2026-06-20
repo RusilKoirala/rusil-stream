@@ -1,11 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ContentCard } from "@/components/ui/content-card";
+import { ContentCard, CARD_HEIGHT } from "@/components/ui/content-card";
 import { OfflineBanner } from "@/components/ui/offline-banner";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import { ScreenReveal } from "@/components/ui/screen-reveal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SkeletonGrid } from "@/components/ui/skeleton-grid";
@@ -13,6 +11,11 @@ import { StateView } from "@/components/ui/state-view";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import type { RootStackParamList } from "@/navigation/types";
+
+// Grid card row height: image height + bottom margin (mb-4 = 16px)
+const GRID_ITEM_HEIGHT = CARD_HEIGHT.grid + 16;
+// ListHeaderComponent fixed height
+const LIST_HEADER_HEIGHT = 28;
 
 export function MyListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,7 +27,6 @@ export function MyListScreen() {
   if (isOffline && hasNoCachedData) {
     return (
       <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-        <PremiumBackground />
         <OfflineBanner visible={isOffline} />
         <StateView
           icon="wifi-off-outline"
@@ -37,7 +39,6 @@ export function MyListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-      <PremiumBackground />
       <OfflineBanner visible={isOffline} />
       <ScreenReveal className="flex-1">
         <View className="px-4 pt-2">
@@ -62,6 +63,15 @@ export function MyListScreen() {
             keyExtractor={(item) => `${item.type}-${item.id}`}
             numColumns={3}
             columnWrapperStyle={{ justifyContent: "space-between" }}
+            getItemLayout={(_data, index) => ({
+              length: GRID_ITEM_HEIGHT,
+              offset: LIST_HEADER_HEIGHT + GRID_ITEM_HEIGHT * Math.floor(index / 3),
+              index,
+            })}
+            initialNumToRender={12}
+            maxToRenderPerBatch={9}
+            windowSize={5}
+            removeClippedSubviews
             ListHeaderComponent={
               <View className="mb-3 flex-row items-center justify-between px-1">
                 <Text className="text-xs uppercase tracking-[1px] text-zinc-500">{data.length} saved titles</Text>

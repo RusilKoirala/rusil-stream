@@ -4,9 +4,8 @@ import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ContentCard } from "@/components/ui/content-card";
+import { ContentCard, CARD_HEIGHT } from "@/components/ui/content-card";
 import { OfflineBanner } from "@/components/ui/offline-banner";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import { ScreenReveal } from "@/components/ui/screen-reveal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SkeletonGrid } from "@/components/ui/skeleton-grid";
@@ -14,6 +13,11 @@ import { StateView } from "@/components/ui/state-view";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useSearchContent } from "@/hooks/use-search-content";
 import type { RootStackParamList } from "@/navigation/types";
+
+// Grid card row height: image height + bottom margin (mb-4 = 16px)
+const GRID_ITEM_HEIGHT = CARD_HEIGHT.grid + 16;
+// ListHeaderComponent fixed height
+const LIST_HEADER_HEIGHT = 28;
 
 export function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -33,8 +37,7 @@ export function SearchScreen() {
   if (isOffline && hasNoCachedData) {
     return (
       <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-        <PremiumBackground />
-        <OfflineBanner visible={isOffline} />
+      <OfflineBanner visible={isOffline} />
         <StateView
           icon={"wifi-off-outline" as any}
           title="You're offline"
@@ -46,7 +49,6 @@ export function SearchScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-      <PremiumBackground />
       <OfflineBanner visible={isOffline} />
       <ScreenReveal className="flex-1">
         <View className="px-4 pt-2">
@@ -98,6 +100,15 @@ export function SearchScreen() {
             numColumns={3}
             keyExtractor={(item) => `${item.type}-${item.id}`}
             columnWrapperStyle={{ justifyContent: "space-between" }}
+            getItemLayout={(_data, index) => ({
+              length: GRID_ITEM_HEIGHT,
+              offset: LIST_HEADER_HEIGHT + GRID_ITEM_HEIGHT * Math.floor(index / 3),
+              index,
+            })}
+            initialNumToRender={12}
+            maxToRenderPerBatch={9}
+            windowSize={5}
+            removeClippedSubviews
             ListEmptyComponent={
               <View className="mt-14">
                 <StateView

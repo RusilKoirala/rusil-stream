@@ -9,7 +9,6 @@ import { WebView } from "react-native-webview";
 import type { WebViewNavigation } from "react-native-webview/lib/WebViewTypes";
 import { env } from "@/config/env";
 import { AnimatedPressable } from "@/components/ui/animated-pressable";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import type { RootStackParamList } from "@/navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Player">;
@@ -122,7 +121,6 @@ export function PlayerScreen({ navigation, route }: Props) {
   return (
     <View className="flex-1 bg-black">
       <StatusBar hidden style="light" />
-      <PremiumBackground />
 
       <View className="absolute left-0 right-0 top-4 z-20 flex-row items-center px-4">
         <AnimatedPressable

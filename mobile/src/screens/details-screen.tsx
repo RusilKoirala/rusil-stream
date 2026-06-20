@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { ImageBackground, ScrollView, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { ContentRow } from "@/components/ui/content-row";
 import { AnimatedPressable } from "@/components/ui/animated-pressable";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import { ScreenReveal } from "@/components/ui/screen-reveal";
 import { SkeletonBox } from "@/components/ui/skeleton-box";
 import { getContentDetails } from "@/lib/api";
@@ -17,7 +17,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Details">;
 
 function DetailsSkeletonLayout() {
   return (
-    <ScrollView className="flex-1 bg-brand-bg">
+    <ScrollView className="flex-1 bg-[#0b0c10]">
       {/* Backdrop skeleton */}
       <SkeletonBox height={430} borderRadius={0} />
 
@@ -77,80 +77,119 @@ export function DetailsScreen({ route, navigation }: Props) {
   }, []);
 
   return (
-    <ScrollView className="flex-1 bg-brand-bg">
-      <PremiumBackground />
+    <ScrollView className="flex-1 bg-[#0b0c10]">
       <ScreenReveal>
-        <View className="h-[430px] overflow-hidden bg-black">
+        <View className="h-[440px] overflow-hidden bg-black">
           {data.backdropPath ? (
-            <ImageBackground source={{ uri: data.backdropPath }} className="h-full w-full" resizeMode="cover">
+            <View style={StyleSheet.absoluteFill}>
+              <ExpoImage
+                source={{ uri: data.backdropPath }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={0}
+                cachePolicy="memory-disk"
+                recyclingKey={`details-backdrop-${data.id}-${data.type}`}
+              />
+              {/* Matches web hero: from-black/68 via-transparent to-bg */}
               <LinearGradient
-                colors={["rgba(3,4,6,0.3)", "rgba(8,10,14,0.55)", "rgba(8,10,14,0.98)"]}
-                locations={[0.05, 0.52, 1]}
-                className="h-full w-full justify-end px-4 pb-7"
+                colors={["rgba(3,4,6,0.22)", "rgba(8,10,14,0.40)", "rgba(8,10,14,0.92)", "rgba(11,12,16,1)"]}
+                locations={[0, 0.38, 0.72, 1]}
+                className="h-full w-full justify-end px-5 pb-6"
               >
-                <Text className="text-4xl font-black text-white">{data.title}</Text>
+                {/* Title */}
+                <Text
+                  className="text-4xl font-bold text-white"
+                  style={{ letterSpacing: -0.5 }}
+                >
+                  {data.title}
+                </Text>
 
-                <View className="mt-3 flex-row items-center gap-3">
-                  <View className="flex-row items-center gap-1.5">
-                    <Ionicons name="star" size={13} color="#F3C97A" />
-                    <Text className="text-sm font-semibold text-zinc-100">{formatRating(data.voteAverage)}</Text>
-                  </View>
-                  <Text className="text-sm text-zinc-300">{formatYear(data.releaseDate)}</Text>
-                  <Text className="text-sm uppercase tracking-[0.5px] text-zinc-300">{data.type}</Text>
-                  <View className="rounded-md border border-white/30 px-2 py-0.5">
-                    <Text className="text-[10px] font-semibold uppercase tracking-[0.8px] text-zinc-100">HD</Text>
+                {/* Metadata row */}
+                <View className="mt-3 flex-row flex-wrap items-center gap-x-3 gap-y-1">
+                  {data.voteAverage > 0 ? (
+                    <View className="flex-row items-center gap-1.5">
+                      <Ionicons name="star" size={12} color="#F3C97A" />
+                      <Text className="text-sm font-semibold text-white/90">
+                        {formatRating(data.voteAverage)}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Text className="text-sm text-white/50">{formatYear(data.releaseDate)}</Text>
+                  <Text className="text-sm uppercase tracking-[0.5px] text-white/50">{data.type}</Text>
+                  <View className="rounded border border-white/25 px-1.5 py-0.5">
+                    <Text className="text-[9px] font-semibold uppercase tracking-[0.8px] text-white/70">HD</Text>
                   </View>
                 </View>
 
+                {/* Action buttons — web style: white Play + ghost secondary */}
                 <View className="mt-5 flex-row items-center gap-3">
                   <AnimatedPressable
-                    onPress={() => navigation.navigate("Player", { id: data.id, type: data.type, title: data.title })}
+                    onPress={() =>
+                      navigation.navigate("Player", { id: data.id, type: data.type, title: data.title })
+                    }
                     accessibilityRole="button"
                     accessibilityLabel="Play"
-                    className="min-w-32 flex-row items-center justify-center gap-2 rounded-full bg-white px-6 py-3"
+                    className="h-11 min-w-[132px] flex-row items-center justify-center gap-2 rounded-full bg-white"
                   >
-                    <Ionicons name="play" size={14} color="#050505" />
-                    <Text className="font-bold text-black">Play</Text>
+                    <Ionicons name="play" size={14} color="#0b0c10" />
+                    <Text className="text-sm font-bold text-[#0b0c10]">Play</Text>
                   </AnimatedPressable>
+
                   <AnimatedPressable
                     onPress={() => toggleWatchlist.mutate(data)}
                     accessibilityRole="button"
                     accessibilityLabel={inWatchlist ? "Remove from My List" : "Add to My List"}
-                    className="min-w-32 flex-row items-center justify-center gap-2 rounded-full bg-[#1A2332]/90 px-6 py-3"
+                    className="h-11 min-w-[132px] flex-row items-center justify-center gap-2 rounded-full border border-white/20 bg-black/40"
                   >
-                    <Ionicons name={inWatchlist ? "checkmark" : "add"} size={14} color="#FFFFFF" />
-                    <Text className="font-bold text-white">{inWatchlist ? "In My List" : "My List"}</Text>
+                    <Ionicons
+                      name={inWatchlist ? "checkmark" : "add"}
+                      size={15}
+                      color="rgba(255,255,255,0.85)"
+                    />
+                    <Text className="text-sm font-semibold text-white/85">
+                      {inWatchlist ? "In My List" : "My List"}
+                    </Text>
                   </AnimatedPressable>
                 </View>
               </LinearGradient>
-            </ImageBackground>
+            </View>
           ) : (
-            <View className="h-full w-full justify-end bg-brand-card px-4 pb-7">
-              <Text className="text-4xl font-black text-white">{data.title}</Text>
-              <Text className="mt-2 text-sm text-brand-muted">
+            <View className="h-full w-full justify-end bg-[#111319] px-5 pb-6">
+              <Text className="text-4xl font-bold text-white" style={{ letterSpacing: -0.5 }}>
+                {data.title}
+              </Text>
+              <Text className="mt-2 text-sm text-white/40">
                 {formatYear(data.releaseDate)} • {formatRating(data.voteAverage)}
               </Text>
             </View>
           )}
         </View>
 
-        <View className="px-4 pb-8 pt-5">
-          <Text className="text-[10px] font-semibold uppercase tracking-[1.2px] text-zinc-500">Overview</Text>
-          <Text className="mt-2 text-base leading-7 text-zinc-200">{data.overview}</Text>
+        {/* Body */}
+        <View className="px-5 pb-8 pt-5">
+          <Text className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+            Overview
+          </Text>
+          <Text className="mt-2.5 text-sm leading-7 text-white/70">{data.overview}</Text>
 
           {data.genres.length > 0 ? (
             <View className="mt-5 flex-row flex-wrap gap-2">
               {data.genres.slice(0, 4).map((genre) => (
-                <View key={genre.id} className="rounded-full border border-white/15 bg-[#141C2A] px-3 py-1.5">
-                  <Text className="text-xs text-zinc-200">{genre.name}</Text>
+                <View
+                  key={genre.id}
+                  className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5"
+                >
+                  <Text className="text-xs text-white/60">{genre.name}</Text>
                 </View>
               ))}
             </View>
           ) : null}
 
-          <View className="mt-6 rounded-2xl border border-white/10 bg-[#0E1420]/90 p-4">
-            <Text className="text-[10px] font-semibold uppercase tracking-[1.1px] text-zinc-500">Status</Text>
-            <Text className="mt-1 text-sm text-zinc-200">{data.status || "Available"}</Text>
+          <View className="mt-5 rounded-2xl border border-white/8 bg-[#111319] p-4">
+            <Text className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+              Status
+            </Text>
+            <Text className="mt-1.5 text-sm text-white/70">{data.status || "Available"}</Text>
           </View>
         </View>
 

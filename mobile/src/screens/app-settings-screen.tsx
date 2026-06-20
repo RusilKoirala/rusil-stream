@@ -1,229 +1,210 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ActionSheetIOS, Alert, Platform, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { ActionSheetIOS, Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MenuRow } from "@/components/ui/menu-row";
-import { PremiumBackground } from "@/components/ui/premium-background";
 import { ScreenReveal } from "@/components/ui/screen-reveal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SettingRow } from "@/components/ui/setting-row";
 import { clearHeroLogoCache } from "@/components/ui/hero-banner";
 import { AppSettings } from "@/lib/app-settings-storage";
 import { useAppSettings } from "@/hooks/use-app-settings";
+import { colors, space, radius, type as t } from "@/lib/tokens";
 
 const VIDEO_QUALITY_OPTIONS = ["Auto", "Low", "Medium", "High"] as const;
 type VideoQualityLabel = (typeof VIDEO_QUALITY_OPTIONS)[number];
-
-const QUALITY_LABEL_MAP: Record<AppSettings["videoQuality"], VideoQualityLabel> = {
-  auto: "Auto",
-  low: "Low",
-  medium: "Medium",
-  high: "High",
+const TO_LABEL: Record<AppSettings["videoQuality"], VideoQualityLabel> = {
+  auto: "Auto", low: "Low", medium: "Medium", high: "High",
 };
-
-const QUALITY_VALUE_MAP: Record<VideoQualityLabel, AppSettings["videoQuality"]> = {
-  Auto: "auto",
-  Low: "low",
-  Medium: "medium",
-  High: "high",
+const TO_VALUE: Record<VideoQualityLabel, AppSettings["videoQuality"]> = {
+  Auto: "auto", Low: "low", Medium: "medium", High: "high",
 };
 
 export function AppSettingsScreen() {
   const { settings, updateSetting } = useAppSettings();
   const { autoplayNext, autoplayPreview, downloadOnWifiOnly, notificationsEnabled, videoQuality } = settings;
+
   const [savedFeedback, setSavedFeedback] = useState(false);
-  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const showSavedFeedback = () => {
+  const showFeedback = () => {
     setSavedFeedback(true);
-    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
-    feedbackTimerRef.current = setTimeout(() => setSavedFeedback(false), 1500);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setSavedFeedback(false), 1600);
   };
 
-  const handleAutoplayNextChange = (value: boolean) => {
-    updateSetting("autoplayNext", value);
-    showSavedFeedback();
+  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    updateSetting(key, value);
+    showFeedback();
   };
 
-  const handleAutoplayPreviewChange = (value: boolean) => {
-    updateSetting("autoplayPreview", value);
-    showSavedFeedback();
-  };
-
-  const handleDownloadOnWifiOnlyChange = (value: boolean) => {
-    updateSetting("downloadOnWifiOnly", value);
-    showSavedFeedback();
-  };
-
-  const handleNotificationsChange = (value: boolean) => {
-    updateSetting("notificationsEnabled", value);
-    showSavedFeedback();
-  };
-
-  const handleVideoQualityPress = () => {
+  const pickQuality = () => {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancel", ...VIDEO_QUALITY_OPTIONS],
-          cancelButtonIndex: 0,
-          title: "Video Quality",
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) return;
-          const label = VIDEO_QUALITY_OPTIONS[buttonIndex - 1];
-          updateSetting("videoQuality", QUALITY_VALUE_MAP[label]);
-          showSavedFeedback();
-        }
+        { options: ["Cancel", ...VIDEO_QUALITY_OPTIONS], cancelButtonIndex: 0, title: "Video Quality" },
+        (i) => { if (i > 0) update("videoQuality", TO_VALUE[VIDEO_QUALITY_OPTIONS[i - 1]]); }
       );
     } else {
-      Alert.alert(
-        "Video Quality",
-        "Select your preferred video quality",
-        [
-          ...VIDEO_QUALITY_OPTIONS.map((label) => ({
-            text: label,
-            onPress: () => {
-              updateSetting("videoQuality", QUALITY_VALUE_MAP[label]);
-              showSavedFeedback();
-            },
-          })),
-          { text: "Cancel", style: "cancel" },
-        ]
-      );
+      Alert.alert("Video Quality", "Select quality", [
+        ...VIDEO_QUALITY_OPTIONS.map((l) => ({ text: l, onPress: () => update("videoQuality", TO_VALUE[l]) })),
+        { text: "Cancel", style: "cancel" },
+      ]);
     }
   };
 
-  const handleClearCache = () => {
-    Alert.alert(
-      "Clear Cache",
-      "This will remove all cached content. The app will reload data from the network.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            clearHeroLogoCache();
-            const allKeys = await AsyncStorage.getAllKeys();
-            const cacheKeys = allKeys.filter((k) => k.startsWith("@rusilstream/cache/"));
-            if (cacheKeys.length > 0) {
-              await AsyncStorage.multiRemove(cacheKeys);
-            }
-          },
+  const clearCache = () => {
+    Alert.alert("Clear Cache", "Removes all cached content. Data will reload from the network.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear", style: "destructive",
+        onPress: async () => {
+          clearHeroLogoCache();
+          const keys = await AsyncStorage.getAllKeys();
+          const cacheKeys = keys.filter((k) => k.startsWith("@rusilstream/cache/"));
+          if (cacheKeys.length) await AsyncStorage.multiRemove(cacheKeys);
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleClearSearchHistory = () => {
-    Alert.alert(
-      "Clear Search History",
-      "Your search history will be permanently deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            await AsyncStorage.removeItem("@rusilstream/search-history");
-          },
-        },
-      ]
-    );
+  const clearSearch = () => {
+    Alert.alert("Clear Search History", "Your search history will be permanently deleted.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear", style: "destructive",
+        onPress: async () => { await AsyncStorage.removeItem("@rusilstream/search-history"); },
+      },
+    ]);
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
-      <PremiumBackground />
-      <ScreenReveal className="flex-1">
-        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 24 }}>
-          <SectionHeader title="App Settings" subtitle="Playback and app preferences for this device" />
+    <SafeAreaView style={s.root} edges={["top"]}>
+      <ScreenReveal style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+          <SectionHeader title="App Settings" subtitle="Playback and device preferences" />
 
           {savedFeedback && (
-            <Text className="mb-2 text-sm font-medium text-[#E50914]">Settings saved</Text>
+            <View style={s.savedBanner}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+              <Text style={s.savedText}>Settings saved</Text>
+            </View>
           )}
 
-          <View className="mt-2 rounded-2xl border border-white/10 bg-[#0B0D12]">
+          {/* Playback toggles */}
+          <View style={s.card}>
             <SettingRow
               label="Autoplay Next Episode"
-              description="Play the next episode automatically"
+              description="Plays the next episode automatically when one ends"
               icon="play-forward-outline"
               rightContent={
                 <Switch
                   value={autoplayNext}
-                  onValueChange={handleAutoplayNextChange}
-                  trackColor={{ false: "#3f3f46", true: "#E50914" }}
+                  onValueChange={(v) => update("autoplayNext", v)}
+                  trackColor={{ false: colors.bgHighest, true: colors.red }}
+                  thumbColor={colors.text100}
                 />
               }
             />
-
             <SettingRow
               label="Autoplay Previews"
-              description="Play previews while browsing"
+              description="Plays previews while browsing the home screen"
               icon="film-outline"
               rightContent={
                 <Switch
                   value={autoplayPreview}
-                  onValueChange={handleAutoplayPreviewChange}
-                  trackColor={{ false: "#3f3f46", true: "#E50914" }}
+                  onValueChange={(v) => update("autoplayPreview", v)}
+                  trackColor={{ false: colors.bgHighest, true: colors.red }}
+                  thumbColor={colors.text100}
                 />
               }
             />
-
             <SettingRow
               label="Wi-Fi Only Downloads"
-              description="Avoid mobile data for downloads"
+              description="Prevents downloads over mobile data"
               icon="wifi-outline"
               rightContent={
                 <Switch
                   value={downloadOnWifiOnly}
-                  onValueChange={handleDownloadOnWifiOnlyChange}
-                  trackColor={{ false: "#3f3f46", true: "#E50914" }}
+                  onValueChange={(v) => update("downloadOnWifiOnly", v)}
+                  trackColor={{ false: colors.bgHighest, true: colors.red }}
+                  thumbColor={colors.text100}
                 />
               }
             />
-
             <SettingRow
               label="Notifications"
-              description="Receive alerts for new content and updates"
+              description="Alerts for new content and updates"
               icon="notifications-outline"
               rightContent={
                 <Switch
                   value={notificationsEnabled}
-                  onValueChange={handleNotificationsChange}
-                  trackColor={{ false: "#3f3f46", true: "#E50914" }}
+                  onValueChange={(v) => update("notificationsEnabled", v)}
+                  trackColor={{ false: colors.bgHighest, true: colors.red }}
+                  thumbColor={colors.text100}
                 />
               }
             />
-
             <SettingRow
               label="Video Quality"
-              description="Adjust streaming resolution"
+              description="Streaming resolution preference"
               icon="speedometer-outline"
-              onPress={handleVideoQualityPress}
+              onPress={pickQuality}
               showDivider={false}
               rightContent={
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-sm text-zinc-400">{QUALITY_LABEL_MAP[videoQuality]}</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                <View style={s.qualityRow}>
+                  <Text style={s.qualityText}>{TO_LABEL[videoQuality]}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.text20} />
                 </View>
               }
             />
           </View>
 
-          <View className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
-            <MenuRow label="Clear Cache" icon="trash-outline" onPress={handleClearCache} />
-            <MenuRow label="Clear Search History" icon="search-outline" onPress={handleClearSearchHistory} showDivider={false} />
+          {/* Danger zone */}
+          <View style={s.card}>
+            <MenuRow label="Clear Cache"          icon="trash-outline"  onPress={clearCache} />
+            <MenuRow label="Clear Search History" icon="search-outline" onPress={clearSearch} showDivider={false} />
           </View>
         </ScrollView>
       </ScreenReveal>
     </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  root:  { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingBottom: 48, gap: space[3] },
+
+  savedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+    marginHorizontal: space[4],
+    paddingVertical: space[2],
+  },
+  savedText: {
+    fontSize: t.size.sm,
+    fontWeight: t.weight.medium,
+    color: colors.success,
+  },
+  card: {
+    marginHorizontal: space[4],
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+  },
+  qualityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+  },
+  qualityText: {
+    fontSize: t.size.sm,
+    color: colors.text40,
+    fontWeight: t.weight.medium,
+  },
+});

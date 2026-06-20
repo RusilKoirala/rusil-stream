@@ -1,8 +1,10 @@
-import { memo, useCallback } from "react";
-import { FlatList, View } from "react-native";
+import { memo } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import type { Content } from "@/types/content";
 import { ContentCard } from "@/components/ui/content-card";
 import { SectionHeader } from "@/components/ui/section-header";
+
+const MAX_ROW_ITEMS = 12;
 
 interface ContentRowProps {
   title: string;
@@ -15,54 +17,91 @@ interface ContentRowProps {
   showCardTitle?: boolean;
 }
 
-function ContentRowBase({ title, items, onPressItem, showRanking = false, largeRanking = false, hideCountBadge = false, onSeeAll, showCardTitle = true }: ContentRowProps) {
-  const renderItem = useCallback(
-    ({ item, index }: { item: Content; index: number }) => (
-      <ContentCard
-        content={item}
-        onPress={() => onPressItem(item)}
-        rankNumber={showRanking ? index + 1 : undefined}
-        showTitle={showCardTitle && !showRanking}
-        rankSize={largeRanking ? "large" : "regular"}
-      />
-    ),
-    [largeRanking, onPressItem, showCardTitle, showRanking]
-  );
-
-  const getItemLayout = useCallback(
-    (_: ArrayLike<Content> | null | undefined, index: number) => ({
-      length: showRanking ? (largeRanking ? 228 : 198) : 166,
-      offset: (showRanking ? (largeRanking ? 228 : 198) : 166) * index,
-      index,
-    }),
-    [largeRanking, showRanking]
-  );
-
+function ContentRowBase({
+  title,
+  items,
+  onPressItem,
+  showRanking = false,
+  largeRanking = false,
+  hideCountBadge = false,
+  onSeeAll,
+  showCardTitle = true,
+}: ContentRowProps) {
   if (items.length === 0) return null;
 
+  // Never render a card that has no poster — a blank grey rectangle
+  // looks broken and wastes a slot in the row.
+  const withPoster = items.filter((item) => Boolean(item.posterPath));
+  if (withPoster.length === 0) return null;
+
+  const visibleItems = withPoster.length > MAX_ROW_ITEMS
+    ? withPoster.slice(0, MAX_ROW_ITEMS)
+    : withPoster;
+
   return (
-    <View className="mb-8">
+    <View style={s.root}>
       <SectionHeader
         title={title}
         rightLabel={!hideCountBadge && onSeeAll ? "See All" : undefined}
         onRightPress={onSeeAll}
       />
-      <FlatList
+      <ScrollView
         horizontal
-        data={items}
-        keyExtractor={(item) => `${item.type}-${item.id}`}
-        renderItem={renderItem}
-        getItemLayout={getItemLayout}
-        removeClippedSubviews
-        initialNumToRender={4}
-        maxToRenderPerBatch={5}
-        updateCellsBatchingPeriod={35}
-        windowSize={5}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: showRanking ? 8 : 4 }}
         showsHorizontalScrollIndicator={false}
-      />
+        directionalLockEnabled
+        nestedScrollEnabled
+        overScrollMode="never"
+        contentContainerStyle={[
+          s.listContent,
+          showRanking && (largeRanking ? s.listContentRankedLg : s.listContentRanked),
+        ]}
+        style={showRanking ? s.listWithRanking : undefined}
+      >
+        {visibleItems.map((item, index) => (
+          <ContentCard
+            key={`${item.type}-${item.id}`}
+            content={item}
+            onPressItem={onPressItem}
+            rankNumber={showRanking ? index + 1 : undefined}
+            showTitle={showCardTitle && !showRanking}
+            rankSize={largeRanking ? "large" : "regular"}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
-export const ContentRow = memo(ContentRowBase);
+export const ContentRow = memo(
+  ContentRowBase,
+  (prev, next) =>
+    prev.title === next.title &&
+    prev.items === next.items &&
+    prev.onPressItem === next.onPressItem &&
+    prev.showRanking === next.showRanking &&
+    prev.largeRanking === next.largeRanking &&
+    prev.hideCountBadge === next.hideCountBadge &&
+    prev.onSeeAll === next.onSeeAll &&
+    prev.showCardTitle === next.showCardTitle
+);
+
+const s = StyleSheet.create({
+  root: {
+    marginBottom: 24,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  listContentRanked: {
+    paddingLeft: 12,
+    paddingRight: 16,
+  },
+  listContentRankedLg: {
+    paddingLeft: 8,
+    paddingRight: 16,
+  },
+  listWithRanking: {
+    paddingTop: 4,
+  },
+});

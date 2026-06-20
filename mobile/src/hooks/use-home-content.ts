@@ -4,13 +4,15 @@ import {
   getHomeFeatured,
   getHomeRecommended,
   getHomeTrending,
-  getNewReleases,
   getPopularMovies,
   getPopularTV,
   getTopRatedMovies,
+  getNewReleases,
 } from "@/lib/api";
 import { readCache, writeCache } from "@/lib/persistent-cache";
 import type { Content } from "@/types/content";
+
+const EMPTY_CONTENT: Content[] = [];
 
 function sectionKey(section: string) {
   return `home-v3/${section}`;
@@ -21,7 +23,6 @@ async function loadFromCacheOrNetwork<T>(section: string, fetcher: () => Promise
   if (cached) {
     return cached.data;
   }
-
   const fresh = await fetcher();
   await writeCache(sectionKey(section), fresh);
   return fresh;
@@ -66,28 +67,28 @@ export function useHomeContent() {
 
   const popularMoviesQuery = useQuery({
     queryKey: ["home-v3", "popular-movies"],
-    queryFn: () => loadFromCacheOrNetwork("popular-movies", () => getPopularMovies()),
+    queryFn: () => loadFromCacheOrNetwork("popular-movies", getPopularMovies),
     staleTime: Infinity,
     enabled: rowsEnabled,
   });
 
   const popularTVQuery = useQuery({
     queryKey: ["home-v3", "popular-tv"],
-    queryFn: () => loadFromCacheOrNetwork("popular-tv", () => getPopularTV()),
+    queryFn: () => loadFromCacheOrNetwork("popular-tv", getPopularTV),
     staleTime: Infinity,
     enabled: rowsEnabled,
   });
 
   const topRatedQuery = useQuery({
     queryKey: ["home-v3", "top-rated"],
-    queryFn: () => loadFromCacheOrNetwork("top-rated", () => getTopRatedMovies()),
+    queryFn: () => loadFromCacheOrNetwork("top-rated", getTopRatedMovies),
     staleTime: Infinity,
     enabled: rowsEnabled,
   });
 
   const newReleasesQuery = useQuery({
     queryKey: ["home-v3", "new-releases"],
-    queryFn: () => loadFromCacheOrNetwork("new-releases", () => getNewReleases()),
+    queryFn: () => loadFromCacheOrNetwork("new-releases", getNewReleases),
     staleTime: Infinity,
     enabled: rowsEnabled,
   });
@@ -116,22 +117,22 @@ export function useHomeContent() {
       }),
       queryClient.fetchQuery({
         queryKey: ["home-v3", "popular-movies"],
-        queryFn: () => refreshAndReplaceCache("popular-movies", () => getPopularMovies()),
+        queryFn: () => refreshAndReplaceCache("popular-movies", getPopularMovies),
         staleTime: Infinity,
       }),
       queryClient.fetchQuery({
         queryKey: ["home-v3", "popular-tv"],
-        queryFn: () => refreshAndReplaceCache("popular-tv", () => getPopularTV()),
+        queryFn: () => refreshAndReplaceCache("popular-tv", getPopularTV),
         staleTime: Infinity,
       }),
       queryClient.fetchQuery({
         queryKey: ["home-v3", "top-rated"],
-        queryFn: () => refreshAndReplaceCache("top-rated", () => getTopRatedMovies()),
+        queryFn: () => refreshAndReplaceCache("top-rated", getTopRatedMovies),
         staleTime: Infinity,
       }),
       queryClient.fetchQuery({
         queryKey: ["home-v3", "new-releases"],
-        queryFn: () => refreshAndReplaceCache("new-releases", () => getNewReleases()),
+        queryFn: () => refreshAndReplaceCache("new-releases", getNewReleases),
         staleTime: Infinity,
       }),
     ]);
@@ -139,39 +140,20 @@ export function useHomeContent() {
 
   return {
     featured: (featuredQuery.data as Content | null | undefined) ?? null,
-    trending: (trendingQuery.data as Content[] | undefined) ?? [],
-    continueWatching: (continueQuery.data as Content[] | undefined) ?? [],
-    recommended: (recommendedQuery.data as Content[] | undefined) ?? [],
-    popularMovies: (popularMoviesQuery.data as Content[] | undefined) ?? [],
-    popularTV: (popularTVQuery.data as Content[] | undefined) ?? [],
-    topRatedMovies: (topRatedQuery.data as Content[] | undefined) ?? [],
-    newReleases: (newReleasesQuery.data as Content[] | undefined) ?? [],
-    isCoreLoading: featuredQuery.isLoading || trendingQuery.isLoading,
-    isRowsLoading:
-      continueQuery.isLoading ||
-      recommendedQuery.isLoading ||
-      popularMoviesQuery.isLoading ||
-      popularTVQuery.isLoading ||
-      topRatedQuery.isLoading ||
-      newReleasesQuery.isLoading,
+    trending: (trendingQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    continueWatching: (continueQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    recommended: (recommendedQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    popularMovies: (popularMoviesQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    popularTV: (popularTVQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    topRated: (topRatedQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
+    newReleases: (newReleasesQuery.data as Content[] | undefined) ?? EMPTY_CONTENT,
     isLoading:
-      featuredQuery.isLoading ||
-      trendingQuery.isLoading ||
-      continueQuery.isLoading ||
-      recommendedQuery.isLoading ||
-      popularMoviesQuery.isLoading ||
-      popularTVQuery.isLoading ||
-      topRatedQuery.isLoading ||
-      newReleasesQuery.isLoading,
+      !rowsEnabled && (featuredQuery.isLoading || trendingQuery.isLoading),
     isError:
       featuredQuery.isError ||
       trendingQuery.isError ||
       continueQuery.isError ||
-      recommendedQuery.isError ||
-      popularMoviesQuery.isError ||
-      popularTVQuery.isError ||
-      topRatedQuery.isError ||
-      newReleasesQuery.isError,
+      recommendedQuery.isError,
     refetch,
   };
 }

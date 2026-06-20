@@ -1,114 +1,247 @@
 import { memo } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { Image, Text, View } from "react-native";
-import Svg, { Text as SvgText } from "react-native-svg";
-import { AnimatedPressable } from "@/components/ui/animated-pressable";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Content } from "@/types/content";
+import { PosterImage } from "@/components/ui/poster-image";
+import { colors, radius, type as t } from "@/lib/tokens";
+
+// Card dimensions — fixed so getItemLayout works perfectly
+export const CARD_WIDTH = {
+  row:      140,   // standard row card poster
+  ranked:   140,   // ranked — same poster width, gutter handled separately
+  rankedLg: 140,
+  grid:     "100%" as const,
+} as const;
+
+/** Left gutter reserved for the rank number beside the poster */
+export const RANK_GUTTER = {
+  regular: 32,
+  large:   32,
+} as const;
+
+export const CARD_HEIGHT = {
+  row:      210,   // all row variants share one height for visual consistency
+  ranked:   210,
+  rankedLg: 210,
+  grid:     176,
+} as const;
 
 interface ContentCardProps {
   content: Content;
-  onPress: () => void;
+  onPress?: () => void;
+  onPressItem?: (item: Content) => void;
   variant?: "row" | "grid";
   showTitle?: boolean;
   rankNumber?: number;
   rankSize?: "regular" | "large";
 }
 
-function ContentCardBase({ content, onPress, variant = "row", showTitle = true, rankNumber, rankSize = "regular" }: ContentCardProps) {
-  const isGrid = variant === "grid";
-  const progressPercentage = content.progressPercentage;
-  const hasProgress = typeof progressPercentage === "number" && progressPercentage >= 0 && progressPercentage <= 100;
-  const isRanked = typeof rankNumber === "number";
-  const cardShadowClass = isGrid ? "shadow-soft" : "shadow-card";
-  const shouldShowTitle = showTitle && !isRanked;
+function ContentCardBase({
+  content,
+  onPress,
+  onPressItem,
+  variant = "row",
+  showTitle = true,
+  rankNumber,
+  rankSize = "regular",
+}: ContentCardProps) {
+  const isGrid      = variant === "grid";
+  const isRanked    = typeof rankNumber === "number";
   const isLargeRank = isRanked && rankSize === "large";
+  const showLabel   = showTitle && !isRanked;
+
+  const progress = content.progressPercentage;
+  const hasProgress =
+    typeof progress === "number" && progress >= 0 && progress <= 100;
+
+  // Image height per variant
+  const imgHeight = isGrid
+    ? CARD_HEIGHT.grid
+    : isLargeRank
+    ? CARD_HEIGHT.rankedLg
+    : isRanked
+    ? CARD_HEIGHT.ranked
+    : CARD_HEIGHT.row;
+
+  // Container width
+  const containerStyle = isGrid
+    ? s.containerGrid
+    : isLargeRank
+    ? s.containerRankedLg
+    : isRanked
+    ? s.containerRanked
+    : s.containerRow;
 
   return (
-    <View className={`${isGrid ? "w-full" : isRanked ? isLargeRank ? "mr-4 w-[204px] pl-[52px]" : "mr-3 w-[176px] pl-[45px]" : "mr-3 w-[154px]"}`}>
-    <AnimatedPressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={content.title}
-      android_ripple={{ color: "rgba(255,255,255,0.14)" }}
-    >
-      {isRanked ? (
-        <View className="absolute -bottom-5 left-0 z-10">
-          <Svg width={isLargeRank ? 112 : 98} height={isLargeRank ? 172 : 152} viewBox="0 0 100 150">
-            <SvgText
-              x="50"
-              y="146"
-              fontSize="140"
-              fontWeight="900"
-              textAnchor="middle"
-              fill="transparent"
-              stroke="#ffffff"
-              strokeWidth="6"
-            >
-              {rankNumber}
-            </SvgText>
-            <SvgText
-              x="50"
-              y="146"
-              fontSize="140"
-              fontWeight="900"
-              textAnchor="middle"
-              fill="#000000"
-            >
-              {rankNumber}
-            </SvgText>
-          </Svg>
-        </View>
-      ) : null}
-
-      <View className={`overflow-hidden ${isRanked ? "rounded-[20px]" : "rounded-lg"} bg-brand-card ${cardShadowClass}`}>
-        {content.posterPath ? (
-          <View>
-            <Image
-              source={{ uri: content.posterPath }}
-              className={`${isGrid ? "h-44" : isRanked ? isLargeRank ? "h-[266px]" : "h-[228px]" : "h-[220px]"} w-full`}
-              resizeMode="cover"
-            />
-            <LinearGradient colors={["transparent", "rgba(5,8,12,0.36)", "rgba(5,8,12,0.82)"]} locations={[0.35, 0.68, 1]} className="absolute inset-0" />
-          </View>
-        ) : (
-          <View
-            className={`${isGrid ? "h-44" : isRanked ? isLargeRank ? "h-[266px]" : "h-[228px]" : "h-[220px]"} w-full items-center justify-center bg-brand-cardAlt`}
-          >
-            <Ionicons name="film-outline" size={20} color="#9AA3B2" />
-            <Text className="px-2 text-center text-xs text-brand-muted">No image</Text>
-          </View>
-        )}
-
-        {isGrid && content.voteAverage > 0 ? (
-          <View className="absolute right-2 top-2 flex-row items-center gap-1 rounded-full border border-white/20 bg-black/65 px-2 py-1">
-            <Ionicons name="star" size={10} color="#F3C97A" />
-            <Text className="text-[10px] font-semibold text-white">{content.voteAverage.toFixed(1)}</Text>
+    <View style={containerStyle}>
+      <Pressable
+        onPress={onPress ?? (() => onPressItem?.(content))}
+        accessibilityRole="button"
+        accessibilityLabel={content.title}
+        android_ripple={{ color: "rgba(255,255,255,0.12)", borderless: false }}
+        style={({ pressed }) =>
+          pressed && Platform.OS === "ios" ? { opacity: 0.82 } : undefined
+        }
+      >
+        {/* Rank number — SVG outline rendered behind the card */}
+        {isRanked ? (
+          <View style={s.rankContainer}>
+            <Text style={isLargeRank ? s.rankNumberLg : s.rankNumber}>{rankNumber}</Text>
           </View>
         ) : null}
 
-      </View>
+        {/* Poster */}
+        <View style={[s.imageWrap, { height: imgHeight }]}>
+          <PosterImage
+            uri={content.posterPath}
+            recyclingKey={`${content.type}-${content.id}`}
+            style={s.image}
+          />
 
-      {shouldShowTitle ? (
-        <>
-          <Text numberOfLines={1} className="mt-2 text-sm font-semibold text-brand-text">
-            {content.title}
-          </Text>
-          {isGrid ? <Text className="text-xs text-brand-muted uppercase">{content.type}</Text> : null}
-
-          {hasProgress ? (
-            <View className="mt-2">
-              <View className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                <View className="h-full rounded-full bg-brand-red" style={{ width: `${progressPercentage}%` }} />
-              </View>
-              <Text className="mt-1 text-[11px] text-brand-muted">{progressPercentage}% watched</Text>
+          {/* Grid rating badge */}
+          {isGrid && content.voteAverage > 0 ? (
+            <View style={s.ratingBadge}>
+              <Ionicons name="star" size={9} color={colors.gold} />
+              <Text style={s.ratingText}>{content.voteAverage.toFixed(1)}</Text>
             </View>
           ) : null}
-        </>
-      ) : null}
-    </AnimatedPressable>
+        </View>
+
+        {/* Title + progress */}
+        {showLabel ? (
+          <View style={s.labelBlock}>
+            <Text style={s.title} numberOfLines={1}>{content.title}</Text>
+            {isGrid ? (
+              <Text style={s.type}>{content.type.toUpperCase()}</Text>
+            ) : null}
+            {hasProgress ? (
+              <View style={s.progressTrack}>
+                <View style={[s.progressFill, { width: `${progress}%` as any }]} />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </Pressable>
     </View>
   );
 }
 
-export const ContentCard = memo(ContentCardBase);
+export const ContentCard = memo(ContentCardBase, (prev, next) =>
+  prev.content.id === next.content.id &&
+  prev.content.type === next.content.type &&
+  prev.content.posterPath === next.content.posterPath &&
+  prev.content.progressPercentage === next.content.progressPercentage &&
+  prev.onPress === next.onPress &&
+  prev.onPressItem === next.onPressItem &&
+  prev.variant === next.variant &&
+  prev.showTitle === next.showTitle &&
+  prev.rankNumber === next.rankNumber &&
+  prev.rankSize === next.rankSize
+);
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  // Containers
+  containerRow: {
+    width: CARD_WIDTH.row,
+    marginRight: 10,
+  },
+  containerRanked: {
+    width: CARD_WIDTH.ranked + RANK_GUTTER.regular,
+    marginRight: 10,
+    paddingLeft: RANK_GUTTER.regular,
+  },
+  containerRankedLg: {
+    width: CARD_WIDTH.rankedLg + RANK_GUTTER.large,
+    marginRight: 12,
+    paddingLeft: RANK_GUTTER.large,
+  },
+  containerGrid: {
+    width: "100%",
+  },
+
+  // Rank number
+  rankContainer: {
+    position: "absolute",
+    bottom: 14,
+    left: -2,
+    zIndex: 1,
+    justifyContent: "flex-end",
+  },
+  rankNumber: {
+    fontSize: 44,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.18)",
+    lineHeight: 44,
+    includeFontPadding: false,
+  },
+  rankNumberLg: {
+    fontSize: 44,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.18)",
+    lineHeight: 44,
+    includeFontPadding: false,
+  },
+
+  // Image
+  imageWrap: {
+    borderRadius: radius.md,
+    overflow: "hidden",
+    backgroundColor: colors.bgSurface,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+
+  // Rating
+  ratingBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  ratingText: {
+    fontSize: 10,
+    fontWeight: t.weight.semibold,
+    color: colors.text100,
+  },
+
+  // Label
+  labelBlock: {
+    marginTop: 6,
+    gap: 2,
+  },
+  title: {
+    fontSize: t.size.sm,
+    fontWeight: t.weight.semibold,
+    color: colors.text80,
+  },
+  type: {
+    fontSize: 10,
+    color: colors.text40,
+    fontWeight: t.weight.medium,
+    letterSpacing: 0.5,
+  },
+
+  // Progress
+  progressTrack: {
+    marginTop: 4,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.bgHighest,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 1,
+    backgroundColor: colors.red,
+  },
+});

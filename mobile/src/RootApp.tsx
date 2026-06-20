@@ -1,12 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { env } from "@/config/env";
 import { tokenCache } from "@/lib/token-cache";
 import { RootNavigator } from "@/navigation/root-navigator";
+
+// Keep the native splash visible until we explicitly hide it
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export function RootApp() {
   const queryClient = useMemo(
@@ -24,6 +29,11 @@ export function RootApp() {
     []
   );
 
+  // Hide the native splash as soon as JS is ready
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   if (!env.clerkPublishableKey) {
     return (
       <View className="flex-1 items-center justify-center bg-brand-bg px-6">
@@ -36,15 +46,17 @@ export function RootApp() {
   }
 
   return (
-    <ClerkProvider publishableKey={env.clerkPublishableKey} tokenCache={tokenCache}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <View className="flex-1 bg-brand-bg">
-            <StatusBar style="light" backgroundColor="#050505" />
-            <RootNavigator />
-          </View>
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider publishableKey={env.clerkPublishableKey} tokenCache={tokenCache}>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <View className="flex-1" style={{ backgroundColor: "#080A0F" }}>
+              <StatusBar style="light" backgroundColor="#050505" />
+              <RootNavigator />
+            </View>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }
