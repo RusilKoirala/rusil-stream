@@ -3,6 +3,7 @@ import { verifyToken } from '@clerk/nextjs/server';
 import { headers } from 'next/headers';
 import { NextRequest } from 'next/server';
 import type { APIError } from './auth-types';
+import { validateDeviceToken } from './device-auth';
 
 /**
  * Authentication utility functions for protected API routes
@@ -66,6 +67,12 @@ export async function validateApiAuth(): Promise<
       return { userId: bearerUserId, error: null };
     }
 
+    // Support TV devices that send device tokens via x-device-token header.
+    const deviceUserId = await getUserIdFromDeviceToken();
+    if (deviceUserId) {
+      return { userId: deviceUserId, error: null };
+    }
+
     return {
       userId: null,
       error: createErrorResponse('UNAUTHORIZED', 'Authentication required', 401),
@@ -92,6 +99,21 @@ async function getUserIdFromBearerToken(): Promise<string | null> {
     });
 
     return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getUserIdFromDeviceToken(): Promise<string | null> {
+  const requestHeaders = await headers();
+  const deviceToken = requestHeaders.get('x-device-token');
+
+  if (!deviceToken) {
+    return null;
+  }
+
+  try {
+    return await validateDeviceToken(deviceToken);
   } catch {
     return null;
   }
