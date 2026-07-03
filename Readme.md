@@ -1,3 +1,10 @@
+# Whats new?
+
+- There is new tv app, which provides a great ui to see movies and tvshows. You can browse all catalog through great ui!
+- Ui update, there is new UI having better animations in web
+- Tv app download functionallity through website
+- TV apps allow profile selection and see movie list (ALL synced whether its Tv, mobile or web)
+
 # Rusil Stream
 
 Rusil Stream is a multi-platform streaming project built mainly to practice full-stack development. The idea was to create something that feels close to a real movie/TV platform, where users can browse content, watch trailers or streams, and switch between web, mobile, and TV apps.
