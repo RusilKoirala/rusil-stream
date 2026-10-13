@@ -8,12 +8,16 @@ import { cn } from '@/lib/utils';
 import { UserButton } from '@/components/auth/user-button';
 import { BrandLogo } from '@/components/ui/brand-logo';
 
+type TabType = 'home' | 'movies' | 'tv' | 'my-list';
+
 interface TopNavProps {
   solid?: boolean;
   fixed?: boolean;
+  activeTab?: TabType;
+  onTabChange?: (tab: TabType) => void;
 }
 
-export function TopNav({ solid = false, fixed = true }: TopNavProps) {
+export function TopNav({ solid = false, fixed = true, activeTab, onTabChange }: TopNavProps) {
   const pathname = usePathname();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -34,15 +38,20 @@ export function TopNav({ solid = false, fixed = true }: TopNavProps) {
   }, [notificationOpen]);
 
   const navItems = [
-    { href: '/', label: 'Home' },
-    { href: '/tv', label: 'TV Shows' },
-    { href: '/movies', label: 'Movies' },
-    { href: '/my-list', label: 'My List' },
+    { id: 'home' as TabType, href: '/', label: 'Home' },
+    { id: 'tv' as TabType, href: '/tv', label: 'TV Shows' },
+    { id: 'movies' as TabType, href: '/movies', label: 'Movies' },
+    { id: 'my-list' as TabType, href: '/my-list', label: 'My List' },
   ];
 
   const isActivePath = (href: string) => {
     const cleanHref = href.split('?')[0];
     return pathname === cleanHref;
+  };
+
+  const isActiveTab = (id: TabType) => {
+    if (activeTab) return activeTab === id;
+    return isActivePath(navItems.find(item => item.id === id)?.href || '');
   };
 
   return (
@@ -67,7 +76,23 @@ export function TopNav({ solid = false, fixed = true }: TopNavProps) {
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-[0.88rem] uppercase tracking-[0.12em] text-white/86 lg:flex">
           {navItems.map((item) => {
-            const isActive = isActivePath(item.href);
+            const isActive = isActiveTab(item.id);
+
+            if (onTabChange) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={cn(
+                    'relative pb-1.5 transition-colors hover:text-white',
+                    "after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-[#E50914] after:transition-[width] after:duration-300",
+                    isActive ? 'text-white after:w-5' : 'after:w-0 hover:after:w-4'
+                  )}
+                >
+                  {item.label}
+                </button>
+              );
+            }
 
             return (
               <Link

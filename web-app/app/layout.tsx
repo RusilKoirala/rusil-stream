@@ -63,25 +63,36 @@ export const metadata: Metadata = {
   },
 };
 
+const clerkLocalization = {
+  formFieldInputPlaceholder__emailAddress: 'Enter your email address',
+  formFieldInputPlaceholder__emailAddress_username: 'Enter your email address',
+  formFieldInputPlaceholder__password: 'Enter your password',
+  formFieldLabel__emailAddress: 'Email address',
+  formFieldLabel__password: 'Password',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const appContent = (
-    <QueryClientProvider>
+  return (
+    <ClerkProvider localization={clerkLocalization}>
       <html
         lang="en"
         className={`${netflixSans.variable} dark h-full antialiased`}
+        // Clerk injects a transient `data-__host_*__-filters-channel` attribute on
+        // <html> at runtime, which cannot exist in the SSR markup.
+        suppressHydrationWarning
       >
         <body className="min-h-full flex flex-col">
-          {children}
-          <BraveBanner />
-          <Analytics />
+          <QueryClientProvider>
+            {children}
+            <BraveBanner />
+            <Analytics />
+          </QueryClientProvider>
         </body>
       </html>
-    </QueryClientProvider>
+    </ClerkProvider>
   );
-
-  return <ClerkProvider>{appContent}</ClerkProvider>;
 }

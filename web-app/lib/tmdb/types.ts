@@ -222,6 +222,7 @@ export interface Content {
   title: string;
   posterPath: string | null;
   backdropPath: string | null;
+  logo?: string | null;
   overview: string;
   releaseDate: string;
   voteAverage: number;

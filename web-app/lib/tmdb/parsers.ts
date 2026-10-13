@@ -24,6 +24,27 @@ import type {
   Person,
 } from './types';
 import { getOptimizedImageUrl } from './images';
+import { fetchBackdropWithLogo } from './logo-fetcher';
+
+// Cache for backdrop fetches to avoid duplicate API calls
+const backdropCache = new Map<string, Promise<string | null>>();
+
+async function getBackdropWithLogo(mediaType: 'movie' | 'tv', id: number, fallbackPath: string | null): Promise<string | null> {
+  const cacheKey = `${mediaType}-${id}`;
+  
+  // Return cached promise if exists
+  if (backdropCache.has(cacheKey)) {
+    return backdropCache.get(cacheKey)!;
+  }
+  
+  // Create and cache the promise
+  const promise = fetchBackdropWithLogo(mediaType, id).then(backdrop => {
+    return backdrop || getOptimizedImageUrl(fallbackPath, 1280);
+  });
+  
+  backdropCache.set(cacheKey, promise);
+  return promise;
+}
 
 /**
  * Parse TMDB movie to application Content format

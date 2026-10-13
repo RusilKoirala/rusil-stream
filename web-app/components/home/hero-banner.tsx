@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Play, Star, Plus, Info, X } from 'lucide-react'
-import { getGenreLabel } from '@/lib/tmdb/genre-labels'
-import { useTrendingContent } from '@/lib/hooks/use-content'
-
+import { Play, Info, Volume2, VolumeX } from 'lucide-react'
+import { usePopularContent, useTrendingContent } from '@/lib/hooks/use-content'
+import { usePlayerSettings } from '@/lib/hooks/use-player-settings'
 interface Content {
   id: number
   type: 'movie' | 'tv'
@@ -55,314 +53,456 @@ async function getContentLogo(id: number, type: 'movie' | 'tv'): Promise<string 
   return logoPath
 }
 
-export function HeroBanner() {
+interface HeroBannerProps {
+  onReady?: (ready: boolean) => void
+  /** Limit featured titles to movies or TV (home keeps mixed). */
+  contentType?: 'movie' | 'tv'
+  /** When false (inactive tab), stop and tear down the background trailer. */
+  isActive?: boolean
+}
+
+export function HeroBanner({ onReady, contentType, isActive = true }: HeroBannerProps = {}) {
   const router = useRouter()
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const { settings } = usePlayerSettings()
+  const [randomContent, setRandomContent] = useState<Content | null>(null)
   const [titleLogoPath, setTitleLogoPath] = useState<string | null>(null)
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const [selectedContent, setSelectedContent] = useState<Content | null>(null)
-  const [selectedTitleLogoPath, setSelectedTitleLogoPath] = useState<string | null>(null)
-  const { data: trendingData = [], isLoading, error } = useTrendingContent('day')
+  const [isLogoFetched, setIsLogoFetched] = useState(false)
+  const [isBackdropLoaded, setIsBackdropLoaded] = useState(false)
+  const [isLogoLoaded, setIsLogoLoaded] = useState(false)
+  const [trailerKey, setTrailerKey] = useState<string | null>(null)
+  const [showVideo, setShowVideo] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  const [isMuted, setIsMuted] = useState(true)
+  const playerRef = useRef<any>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const playerElementId = contentType ? `hero-player-${contentType}` : 'hero-player'
 
-  const trendingContent = useMemo(
-    () =>
-      (trendingData as Content[])
-        .filter((item) => item.backdropPath !== null)
-        .slice(0, 5),
-    [trendingData]
+  const { data: trendingData = [], isLoading: isTrendingLoading } = useTrendingContent('day')
+  const { data: popularFallback = [], isLoading: isPopularLoading } = usePopularContent(
+    contentType || 'movie',
+    { enabled: Boolean(contentType) }
   )
-  const safeCurrentIndex = trendingContent.length > 0 ? currentIndex % trendingContent.length : 0
+  const isLoading = isTrendingLoading || (Boolean(contentType) && isPopularLoading)
 
-  useEffect(() => {
-    if (trendingContent.length === 0) return
+  const trendingContent = useMemo(() => {
+    const withBackdrop = (item: Content) => Boolean(item.backdropPath)
+    const matchesType = (item: Content) => !contentType || item.type === contentType
 
-    const interval = setInterval(() => {
-      setIsTransitioning(true)
-      
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % trendingContent.length)
-        setIsTransitioning(false)
-      }, 800)
-    }, 6000)
+    const fromTrending = (trendingData as Content[])
+      .filter((item) => withBackdrop(item) && matchesType(item))
+      .slice(0, 10)
 
-    return () => clearInterval(interval)
-  }, [trendingContent.length])
+    if (fromTrending.length > 0) return fromTrending
 
-  useEffect(() => {
-    const current = trendingContent[safeCurrentIndex]
-    if (!current) {
-      return
+    if (contentType) {
+      return (popularFallback as Content[])
+        .filter(withBackdrop)
+        .slice(0, 10)
     }
+
+    return []
+  }, [trendingData, popularFallback, contentType])
+
+  useEffect(() => {
+    if (trendingContent.length > 0 && !randomContent) {
+      const random = trendingContent[Math.floor(Math.random() * trendingContent.length)]
+      // Immediately set randomContent for 0-delay display
+      setRandomContent(random)
+
+      // Optionally upgrade to original backdrop in background
+      if (process.env.NEXT_PUBLIC_TMDB_API_KEY) {
+        fetch(`https://api.themoviedb.org/3/${random.type}/${random.id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.backdrop_path) {
+              const originalBackdrop = `https://image.tmdb.org/t/p/original${data.backdrop_path}`
+              setRandomContent(prev => prev ? { ...prev, backdropPath: originalBackdrop } : prev)
+            }
+          })
+          .catch(() => {})
+      }
+    }
+  }, [trendingContent, randomContent])
+
+  // Safety fallback: if images take longer than 2.5s, reveal hero
+  useEffect(() => {
+    if (!randomContent) return
+    const timer = setTimeout(() => {
+      setIsBackdropLoaded(true)
+      setIsLogoLoaded(true)
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [randomContent])
+
+  useEffect(() => {
+    if (!randomContent) return
 
     let active = true
 
+    // Fetch logo
     ;(async () => {
-      const logoPath = await getContentLogo(current.id, current.type)
+      const logoPath = await getContentLogo(randomContent.id, randomContent.type)
       if (!active) return
       setTitleLogoPath(logoPath)
+      setIsLogoFetched(true)
+      if (!logoPath) {
+        setIsLogoLoaded(true)
+      }
+    })()
+
+    // Fetch trailer
+    ;(async () => {
+      try {
+        const response = await fetch(`/api/content/${randomContent.type}/${randomContent.id}/videos`)
+        if (!response.ok) return
+        const data = await response.json()
+        
+        const trailer = data.results?.find((v: any) => 
+          v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+        )
+        
+        if (active && trailer) {
+          setTrailerKey(trailer.key)
+        }
+      } catch (error) {
+        console.error('Failed to fetch trailer:', error)
+      }
     })()
 
     return () => {
       active = false
     }
-  }, [safeCurrentIndex, trendingContent])
+  }, [randomContent])
 
+  // Auto-play video after 3 seconds, start loading immediately with progress
   useEffect(() => {
-    if (!selectedContent) return
+    if (!trailerKey || !settings.heroTrailer || !isActive) return
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const timer = setTimeout(() => {
+      setShowVideo(true)
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSelectedContent(null)
+      // Start progress animation
+      setLoadingProgress(0)
+      let progress = 0
+      progressIntervalRef.current = setInterval(() => {
+        progress += 2 // 100% over 5 seconds (50 steps * 2 = 100)
+        setLoadingProgress(progress)
+        
+        if (progress >= 100) {
+          setVideoLoaded(true)
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current)
+          }
+        }
+      }, 100) // Update every 100ms
+    }, 3000)
+
+    return () => {
+      clearTimeout(timer)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }, [trailerKey, isActive])
+
+  // Tear down the background trailer whenever this tab is not the active one
+  // (visited tabs stay mounted, so otherwise the video keeps playing in the background)
+  useEffect(() => {
+    if (isActive) return
+
+    setShowVideo(false)
+    setVideoLoaded(false)
+    setLoadingProgress(0)
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+      progressIntervalRef.current = null
+    }
+    if (playerRef.current) {
+      try {
+        playerRef.current.pauseVideo?.()
+        playerRef.current.stopVideo?.()
+        playerRef.current.destroy?.()
+      } catch (e) {}
+      playerRef.current = null
+    }
+  }, [isActive])
+
+  // Initialize YouTube Player
+  useEffect(() => {
+    if (!showVideo || !trailerKey) return
+
+    // Clean up previous player
+    if (playerRef.current) {
+      try {
+        playerRef.current.destroy()
+        playerRef.current = null
+      } catch (e) {}
+    }
+
+    const initPlayer = () => {
+      if (!(window as any).YT?.Player) return
+
+      try {
+        const playerElement = document.getElementById(playerElementId)
+        if (!playerElement) return
+
+        playerRef.current = new (window as any).YT.Player(playerElementId, {
+          videoId: trailerKey,
+          width: '100%',
+          height: '100%',
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0,
+            fs: 0,
+            iv_load_policy: 3,
+            playsinline: 1,
+            mute: 1,
+            loop: 1,
+            playlist: trailerKey,
+            enablejsapi: 1,
+            origin: typeof window !== 'undefined' ? window.location.origin : '',
+            cc_load_policy: 0,
+            autohide: 1,
+          },
+          events: {
+            onReady: (event: any) => {
+              console.log('YouTube player ready')
+              event.target.playVideo()
+              event.target.mute()
+              event.target.setPlaybackQuality('hd720')
+            },
+            onStateChange: (event: any) => {
+              console.log('Player state:', event.data)
+              // State 1 = playing
+              if (event.data === 1) {
+                console.log('Video is playing')
+              }
+            },
+          },
+        })
+      } catch (error) {
+        console.error('Failed to initialize YouTube player:', error)
       }
     }
 
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
+    if (!(window as any).YT) {
+      if (!(window as any).YT_loading) {
+        (window as any).YT_loading = true
+        const tag = document.createElement('script')
+        tag.src = 'https://www.youtube.com/iframe_api'
+        const firstScriptTag = document.getElementsByTagName('script')[0]
+        firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+      }
+
+      const originalCallback = (window as any).onYouTubeIframeAPIReady
+      ;(window as any).onYouTubeIframeAPIReady = () => {
+        if (originalCallback) originalCallback()
+        initPlayer()
+      }
+    } else {
+      initPlayer()
     }
-  }, [selectedContent])
 
-  if (isLoading) {
-    return (
-      <div className="relative h-[88vh] min-h-155 w-full animate-pulse bg-[#141414]">
-        <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-[#141414]" />
-      </div>
-    )
+    return () => {
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy()
+          playerRef.current = null
+        } catch (e) {}
+      }
+    }
+  }, [showVideo, trailerKey, playerElementId])
+
+  const toggleMute = () => {
+    if (!playerRef.current) return
+    
+    try {
+      if (isMuted) {
+        playerRef.current.unMute?.()
+      } else {
+        playerRef.current.mute?.()
+      }
+      setIsMuted(!isMuted)
+    } catch (e) {
+      console.error('Error toggling mute:', e)
+    }
   }
 
-  if (error || trendingContent.length === 0) {
+  const isHeroReady = Boolean(randomContent) && isBackdropLoaded && (isLogoLoaded || (isLogoFetched && !titleLogoPath))
+
+  useEffect(() => {
+    onReady?.(isHeroReady)
+  }, [isHeroReady, onReady])
+
+  useEffect(() => {
+    return () => onReady?.(false)
+  }, [onReady])
+
+  if (isLoading || !randomContent) {
+    return <div className="relative h-[88vh] min-h-155 w-full bg-[#070709]" />
+  }
+
+  if (!randomContent.backdropPath) {
     return null
   }
-
-  const currentContent = trendingContent[safeCurrentIndex]
-  const displayRating = Number.isFinite(currentContent.voteAverage)
-    ? currentContent.voteAverage.toFixed(1)
-    : '6.8'
-  const releaseYear = currentContent.releaseDate ? new Date(currentContent.releaseDate).getFullYear() : null
-
-  // Safety check for backdrop path
-  if (!currentContent.backdropPath) {
-    return null
-  }
-
-  const openDetails = () => {
-    setSelectedContent(currentContent)
-    setSelectedTitleLogoPath(titleLogoPath)
-  }
-
-  const selectedReleaseYear = selectedContent?.releaseDate
-    ? new Date(selectedContent.releaseDate).getFullYear()
-    : null
-
-  const selectedRating = selectedContent && Number.isFinite(selectedContent.voteAverage)
-    ? selectedContent.voteAverage.toFixed(1)
-    : '6.8'
 
   return (
-    <section className="relative h-[88vh] min-h-150 w-full overflow-hidden" onClick={openDetails}>
-      <div
-        className={`absolute inset-0 transition-opacity duration-800 ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        <Image
-          src={currentContent.backdropPath}
-          alt={currentContent.title}
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        />
-      </div>
-
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,8,0.95)_0%,rgba(6,6,9,0.68)_36%,rgba(9,8,10,0.3)_64%,rgba(10,9,11,0.86)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.36)_0%,rgba(0,0,0,0)_40%,rgba(0,0,0,0.98)_100%)]" />
-
+    <section
+      className="relative h-[88vh] min-h-150 w-full overflow-hidden bg-[#070709]"
+    >
       <div className="absolute inset-0">
-        <div className="flex h-full items-end px-6 pb-28 pt-20 md:px-12 md:pb-34 lg:px-14">
-          <div
-            className={`max-w-4xl transition-opacity duration-800 ${
-              isTransitioning ? 'opacity-0' : 'opacity-100'
-            }`}
-          >
-            <div className="mb-5 flex items-center gap-3 text-sm text-white/85 md:text-base">
-              <span className="inline-flex items-center gap-1 text-[#ffd24d]">
-                <Star className="h-4 w-4 fill-current" />
-                {displayRating}
-              </span>
-              {releaseYear ? <span>{releaseYear}</span> : null}
-              <span className="uppercase">{currentContent.type}</span>
-              <span className="rounded border border-white/35 px-1.5 py-0.5 text-[0.68rem] tracking-wide text-white/80">HD</span>
-              <span className="rounded border border-white/35 px-1.5 py-0.5 text-[0.68rem] tracking-wide text-white/80">CC</span>
-            </div>
+        <div className="absolute inset-0">
+          <Image
+            src={randomContent.backdropPath}
+            alt={randomContent.title}
+            fill
+            priority
+            onLoad={() => setIsBackdropLoaded(true)}
+            className="object-cover object-center"
+            sizes="100vw"
+          />
 
+          {showVideo && trailerKey && (
+            <div
+              className="absolute inset-0 w-full h-full youtube-player-container"
+              style={{
+                opacity: videoLoaded ? 1 : 0,
+                transition: 'opacity 0.5s ease-in-out',
+              }}
+            >
+              <div
+                id={playerElementId}
+                className="w-full h-full"
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: '120vw',
+                  height: '120vh',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          )}
+
+          {showVideo && !videoLoaded && (
+            <div className="absolute bottom-3 right-3 z-20">
+              <div className="relative w-6 h-6">
+                <svg className="w-6 h-6 transform -rotate-90">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth="1.5"
+                    fill="none"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 10}`}
+                    strokeDashoffset={`${2 * Math.PI * 10 * (1 - loadingProgress / 100)}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+                  />
+                </svg>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,8,0.92)_0%,rgba(6,6,9,0.55)_36%,rgba(9,8,10,0.15)_64%,rgba(10,9,11,0.75)_100%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0)_35%,rgba(0,0,0,0.96)_100%)] pointer-events-none" />
+
+        <div className="absolute bottom-32 left-8 md:bottom-36 md:left-14">
+          <div className="space-y-5">
             {titleLogoPath ? (
-              <div className="mb-6">
+              <div>
                 <Image
                   src={titleLogoPath}
-                  alt={currentContent.title}
-                  width={760}
-                  height={220}
-                  className="h-auto max-h-36 w-auto max-w-[90%] object-contain md:max-h-40"
+                  alt={randomContent.title}
+                  width={600}
+                  height={200}
+                  onLoad={() => setIsLogoLoaded(true)}
+                  onError={() => setIsLogoLoaded(true)}
+                  className="h-auto max-h-28 w-auto max-w-[85vw] md:max-h-32 object-contain drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]"
                   priority
                 />
               </div>
             ) : (
-              <h1 className="mb-6 text-4xl font-extrabold leading-[1.02] tracking-[0.02em] text-white md:text-5xl lg:text-6xl">
-                {currentContent.title}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] max-w-2xl">
+                {randomContent.title}
               </h1>
             )}
 
-            <p className="mb-8 max-w-2xl text-[0.98rem] leading-7 text-white/86 line-clamp-3 md:text-[1.02rem] md:leading-8">
-              {currentContent.overview}
-            </p>
+            <div className="flex items-center gap-3 text-sm text-white/90">
+              <span className="inline-flex items-center gap-1.5 font-semibold">
+                <svg className="h-4 w-4 fill-[#ffd24d]" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                {randomContent.voteAverage.toFixed(1)}
+              </span>
+              {randomContent.releaseDate && (
+                <span className="text-white/80">
+                  {new Date(randomContent.releaseDate).getFullYear()}
+                </span>
+              )}
+              <span className="uppercase text-white/80 text-xs font-medium tracking-wider">
+                {randomContent.type}
+              </span>
+              <span className="px-2 py-0.5 rounded border border-white/30 text-[0.7rem] font-medium text-white/85">
+                HD
+              </span>
+            </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                size="lg"
-                className="h-10 rounded-full bg-[#E50914] px-6 text-sm font-bold tracking-wide text-white hover:bg-[#f6121d]"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  router.push(`/player?id=${currentContent.id}&type=${currentContent.type}`)
-                }}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push(`/player?id=${randomContent.id}&type=${randomContent.type}`)}
+                className="group relative overflow-hidden rounded-2xl px-8 py-3.5 bg-white text-black font-semibold text-sm transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_30px_rgba(255,255,255,0.3)]"
               >
-                <Play className="mr-2 h-3.5 w-3.5 fill-current" />
-                WATCH
-              </Button>
-              <Button
-                size="lg"
-                className="h-10 rounded-full border border-white/25 bg-black/50 px-6 text-sm font-semibold tracking-wide text-white hover:bg-black/70"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openDetails()
-                }}
+                <div className="flex items-center gap-2.5">
+                  <Play className="h-4 w-4 fill-current" />
+                  <span className="tracking-wide">WATCH</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => router.push(`/${randomContent.type}/${randomContent.id}`)}
+                className="group relative overflow-hidden rounded-2xl px-8 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold text-sm transition-all duration-300 hover:bg-white/15 hover:scale-105 active:scale-95 shadow-[0_8px_30px_rgba(0,0,0,0.3)]"
               >
-                <Info className="mr-2 h-4 w-4" />
-                DETAILS
-              </Button>
+                <div className="flex items-center gap-2.5">
+                  <Info className="h-4 w-4" />
+                  <span className="tracking-wide">DETAILS</span>
+                </div>
+              </button>
+
+              {showVideo && trailerKey && (
+                <button
+                  onClick={toggleMute}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors border border-white/20"
+                  title={isMuted ? 'Click to unmute' : 'Click to mute'}
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-5 w-5" />
+                  ) : (
+                    <Volume2 className="h-5 w-5" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      <div className="absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-2.5">
-        {trendingContent.map((item, index) => (
-          <span
-            key={item.id}
-            className={
-              index === safeCurrentIndex
-                ? 'h-1.5 w-8 rounded-full bg-[#ff4b2b]'
-                : 'h-1.5 w-1.5 rounded-full bg-white/45'
-            }
-          />
-        ))}
-      </div>
-
-      {selectedContent ? (
-        <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/78 px-4 py-6 backdrop-blur-sm"
-          onClick={() => setSelectedContent(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${selectedContent.title} details`}
-        >
-          <article
-            className="relative w-full max-w-190 overflow-hidden rounded-[28px] border border-white/10 bg-[#121010] shadow-[0_26px_70px_rgba(0,0,0,0.72)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="relative h-65 w-full md:h-80">
-              {selectedContent.backdropPath ? (
-                <Image
-                  src={selectedContent.backdropPath}
-                  alt={selectedContent.title}
-                  fill
-                  priority
-                  sizes="(max-width: 768px) 100vw, 760px"
-                  className="object-cover object-center"
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.25)_40%,rgba(12,9,9,0.96)_100%)]" />
-
-              <button
-                type="button"
-                className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80"
-                onClick={() => setSelectedContent(null)}
-                aria-label="Close details"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-                {selectedTitleLogoPath ? (
-                  <Image
-                    src={selectedTitleLogoPath}
-                    alt={selectedContent.title}
-                    width={520}
-                    height={180}
-                    className="mb-4 h-auto max-h-24 w-auto max-w-[88%] object-contain"
-                  />
-                ) : (
-                  <h2 className="mb-4 text-3xl font-black leading-tight text-white md:text-4xl">{selectedContent.title}</h2>
-                )}
-
-                <div className="flex flex-wrap gap-2.5">
-                  <Button
-                    type="button"
-                    className="h-10 rounded-full bg-[#E50914] px-6 text-sm font-semibold text-white hover:bg-[#f6121d]"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setSelectedContent(null)
-                      router.push(`/player?id=${selectedContent.id}&type=${selectedContent.type}`)
-                    }}
-                  >
-                    <Play className="mr-2 h-4 w-4 fill-current" />
-                    Watch
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-10 rounded-full border-white/25 bg-white/5 px-5 text-sm text-white hover:bg-white/12"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    My List
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-5 px-6 pb-7 pt-5 text-white md:px-8 md:pb-8">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-white/86">
-                <span className="inline-flex items-center gap-1 text-[#ffd24d]">
-                  <Star className="h-4 w-4 fill-current" />
-                  {selectedRating}
-                </span>
-                {selectedReleaseYear ? <span>{selectedReleaseYear}</span> : null}
-                <span className="uppercase">{selectedContent.type}</span>
-                <span className="rounded border border-white/35 px-1.5 py-0.5 text-[0.68rem] tracking-wide text-white/80">HD</span>
-                <span>100m</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {selectedContent.genreIds.slice(0, 3).map((genreId) => (
-                  <span
-                    key={genreId}
-                    className="rounded-full border border-white/20 bg-white/6 px-3 py-1 text-xs text-white/82"
-                  >
-                    {getGenreLabel(genreId, selectedContent.type)}
-                  </span>
-                ))}
-              </div>
-
-              <p className="text-base leading-8 text-white/75 md:text-lg">
-                {selectedContent.overview}
-              </p>
-            </div>
-          </article>
-        </div>
-      ) : null}
     </section>
   )
 }

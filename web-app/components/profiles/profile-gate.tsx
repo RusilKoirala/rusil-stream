@@ -1,51 +1,74 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { TopNav } from '@/components/navigation';
-import { HomeScreen } from '@/components/home';
-import { ProfilePicker } from './profile-picker';
-import { useProfiles } from '@/lib/hooks/use-user-data';
-
-interface Profile {
-  id?: string;
-  _id?: string;
-}
+import { useEffect, useRef } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { UnifiedHomeScreen } from '@/components/home';
+import { useProfiles, useCreateProfile } from '@/lib/hooks/use-user-data';
 
 export function ProfileGate() {
-  const { data: profiles = [], isLoading } = useProfiles();
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
-  const [isReady, setIsReady] = useState(false);
+  const { user, isLoaded: userLoaded } = useUser();
+  const { data: profiles = [], isLoading: profilesLoading } = useProfiles();
+  const createProfile = useCreateProfile();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    setSelectedProfileId(localStorage.getItem('selectedProfileId') || '');
-    setIsReady(true);
-  }, []);
+    if (!userLoaded || profilesLoading || initializedRef.current) return;
 
-  const hasValidProfileSelected = useMemo(() => {
-    if (!selectedProfileId) return false;
+    const currentProfileId = localStorage.getItem('selectedProfileId');
 
-    return (profiles as Profile[]).some((profile) => {
-      const profileId = profile.id || profile._id || '';
-      return profileId === selectedProfileId;
-    });
-  }, [profiles, selectedProfileId]);
+    if (profiles.length > 0) {
+      const exists = profiles.some((p) => (p.id || p._id) === currentProfileId);
+      const activeId = exists ? currentProfileId! : (profiles[0].id || profiles[0]._id || '');
+      if (activeId) {
+        localStorage.setItem('selectedProfileId', activeId);
+      }
+      initializedRef.current = true;
+    } else if (user) {
+      // Auto-create a default profile in background with Clerk user details
+      initializedRef.current = true;
+      const defaultName = user.firstName || user.fullName || 'Main Profile';
+      const defaultAvatar = user.imageUrl || '/avatars/avatar1.png';
 
-  if (!isReady || isLoading) {
-    return (
-      <div className="min-h-screen bg-[#141414] flex items-center justify-center">
-        <div className="text-white/80 text-lg">Loading...</div>
-      </div>
-    );
-  }
+      createProfile.mutate(
+        {
+          name: defaultName,
+          avatarUrl: defaultAvatar,
+          isKids: false,
+          maturityRating: 'R',
+          pinEnabled: false,
+          pinRequired: false,
+          language: 'en',
+          preferences: {
+            autoplayNextEpisode: true,
+            autoplayPreviews: true,
+            dataSaverMode: false,
+            subtitleLanguage: 'en',
+            audioLanguage: 'en',
+            selectedGenres: [],
+            notifications: {
+              enabled: true,
+              newReleases: true,
+              watchlistUpdates: true,
+              recommendedContent: true,
+              episodeReminders: true,
+            },
+          },
+        },
+        {
+          onSuccess: (newProf) => {
+            const newId = newProf.id || newProf._id;
+            if (newId) {
+              localStorage.setItem('selectedProfileId', newId);
+            }
+          },
+          onError: () => {
+            // Fallback to user ID if DB write fails
+            localStorage.setItem('selectedProfileId', user.id);
+          },
+        }
+      );
+    }
+  }, [user, userLoaded, profiles, profilesLoading, createProfile]);
 
-  if (!hasValidProfileSelected) {
-    return <ProfilePicker onProfileSelected={setSelectedProfileId} />;
-  }
-
-  return (
-    <>
-      <TopNav />
-      <HomeScreen />
-    </>
-  );
+  return <UnifiedHomeScreen />;
 }

@@ -62,6 +62,13 @@ export interface WatchProgress {
   duration: number // seconds
   percentageWatched: number
   lastWatchedAt: Date
+  // Cached display metadata so Continue Watching renders on any device
+  // without an extra TMDB round-trip.
+  title?: string
+  posterPath?: string | null
+  backdropPath?: string | null
+  year?: string
+  rating?: number
 }
 
 /**

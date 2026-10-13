@@ -214,3 +214,83 @@
     }
   }
 }
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide YouTube branding in embeds */
+.youtube-player-container iframe {
+  pointer-events: none;
+}
+
+.youtube-player-container .ytp-chrome-top,
+.youtube-player-container .ytp-pause-overlay,
+.youtube-player-container .ytp-watermark,
+.youtube-player-container .ytp-impression-link,
+.youtube-player-container .ytp-cards-teaser,
+.youtube-player-container .ytp-endscreen-content {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Try to hide the small YouTube logo */
+.youtube-player-container .ytp-youtube-button {
+  display: none !important;
+}
+
+/* Hide any overlay elements */
+.youtube-player-container .ytp-ce-element {
+  display: none !important;
+}
+
+/* Hide the YouTube logo that appears on hover (upper right corner) */
+.youtube-player-container .ytp-title-link,
+.youtube-player-container .ytp-title,
+.youtube-player-container .ytp-chrome-top-buttons,
+.youtube-player-container .ytp-show-cards-title {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide watermark completely */
+.youtube-player-container a[target="_blank"] {
+  display: none !important;
+}
+
+/* Detail page animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+  opacity: 0;
+}

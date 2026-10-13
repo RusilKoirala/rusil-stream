@@ -18,6 +18,8 @@ interface ContentRowProps {
   watchProgressMap?: Record<number, number>;
   onMoreInfo?: (content: Content) => void;
   onPlay?: (content: Content) => void;
+  enableVideoPreview?: boolean; // Enable video preview on hover
+  videoPreviewDelay?: number; // Delay before showing video preview (ms)
 }
 
 export function ContentRow({
@@ -28,6 +30,8 @@ export function ContentRow({
   watchProgressMap,
   onMoreInfo,
   onPlay,
+  enableVideoPreview = false,
+  videoPreviewDelay = 1500,
 }: ContentRowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +121,8 @@ export function ContentRow({
                 position={position}
                 onPlay={() => onPlay?.(item)}
                 onMoreInfo={() => onMoreInfo?.(item)}
+                enableVideoPreview={enableVideoPreview}
+                videoPreviewDelay={videoPreviewDelay}
               />
             </div>
           );

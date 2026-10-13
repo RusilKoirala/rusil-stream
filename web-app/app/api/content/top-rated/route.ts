@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopRated } from '@/lib/tmdb/service';
+import { fetchBackdropsForItems } from '@/lib/tmdb/logo-fetcher';
 
 /**
  * GET /api/content/top-rated
  * 
- * Fetches top-rated content from TMDB API
+ * Fetches top-rated content from TMDB API with English backdrops (with logos)
  * 
  * Query Parameters:
  * - type: 'movie' | 'tv' (required)
@@ -61,7 +62,21 @@ export async function GET(request: NextRequest) {
       region,
     });
 
-    return NextResponse.json(content, { status: 200 });
+    // Fetch English backdrops with logos for first 20 items
+    const itemsToEnhance = content.slice(0, 20);
+    const backdrops = await fetchBackdropsForItems(
+      itemsToEnhance.map(item => ({ id: item.id, mediaType: item.type }))
+    );
+
+    // Update backdropPath with English backdrops (with logos)
+    const enhancedContent = content.map((item, index) => {
+      if (index < itemsToEnhance.length && backdrops[index]) {
+        return { ...item, backdropPath: backdrops[index] };
+      }
+      return item;
+    });
+
+    return NextResponse.json(enhancedContent, { status: 200 });
   } catch (error) {
     console.error('Error fetching top-rated content:', error);
 

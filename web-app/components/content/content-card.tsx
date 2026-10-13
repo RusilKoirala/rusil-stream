@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Plus, Heart } from 'lucide-react';
 import { useWatchlist, useRatings, useAddToWatchlist, useRemoveFromWatchlist, useSetRating } from '@/lib/hooks/use-user-data';
-import { ContentDetailsModal } from './content-details-modal';
+import { useTrailer } from '@/lib/hooks/use-trailer';
+import { VideoPreviewCard } from './video-preview-card';
 
 interface Content {
   id?: number;
@@ -28,6 +29,8 @@ interface ContentCardProps {
   onPlay?: () => void;
   onMoreInfo?: () => void;
   className?: string;
+  enableVideoPreview?: boolean; // Enable video preview on hover
+  videoPreviewDelay?: number; // Delay before showing video preview (ms)
 }
 
 /**
@@ -35,6 +38,7 @@ interface ContentCardProps {
  * 
  * Base content card component with poster image, lazy loading, and hover expansion.
  * Implements Netflix-style hover interactions with 400ms delay and smooth animations.
+ * Optionally supports video preview on extended hover.
  * 
  * Requirements: 22.1, 22.2, 22.3, 23.1, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
  */
@@ -44,11 +48,61 @@ export function ContentCard({
   onPlay,
   onMoreInfo,
   className,
+  enableVideoPreview = false,
+  videoPreviewDelay = 1500,
 }: ContentCardProps) {
+  const router = useRouter();
+  const resolvedContentId = content.id ?? content.contentId;
+  const resolvedContentType = content.type ?? content.contentType;
+  
+  // Fetch trailer if video preview is enabled
+  const { data: trailerKey } = useTrailer(
+    enableVideoPreview ? resolvedContentId : undefined,
+    enableVideoPreview ? resolvedContentType : undefined
+  );
+
+  // Use VideoPreviewCard if video preview is enabled and trailer is available
+  if (enableVideoPreview && trailerKey) {
+    return (
+      <VideoPreviewCard
+        content={{ ...content, trailerKey }}
+        position={position}
+        onPlay={onPlay}
+        onMoreInfo={onMoreInfo}
+        className={className}
+        hoverDelay={videoPreviewDelay}
+      />
+    );
+  }
+
+  // Otherwise use standard card (rest of component below)
+  return <StandardContentCard 
+    content={content}
+    position={position}
+    onPlay={onPlay}
+    onMoreInfo={onMoreInfo}
+    className={className}
+  />;
+}
+
+interface StandardContentCardProps {
+  content: Content;
+  position?: 'start' | 'middle' | 'end';
+  onPlay?: () => void;
+  onMoreInfo?: () => void;
+  className?: string;
+}
+
+function StandardContentCard({
+  content,
+  position = 'middle',
+  onPlay,
+  onMoreInfo,
+  className,
+}: StandardContentCardProps) {
   const router = useRouter();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { data: watchlist = [] } = useWatchlist(profileId || '');
   const { data: ratings = [] } = useRatings(profileId || '');
@@ -153,8 +207,8 @@ export function ContentCard({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={() => {
-          onMoreInfo?.();
-          setIsDetailsOpen(true);
+          if (!resolvedContentId || !resolvedContentType) return;
+          router.push(`/${resolvedContentType}/${resolvedContentId}`);
         }}
         style={{
           transform: isExpanded ? 'translateY(-5px) scale(1.02)' : 'translateY(0) scale(1)',
@@ -217,26 +271,6 @@ export function ContentCard({
           </div>
         </div>
       </article>
-
-      <ContentDetailsModal
-        content={{
-          ...content,
-          id: resolvedContentId ?? 0,
-          type: resolvedContentType ?? 'movie',
-        }}
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        onWatch={() => {
-          setIsDetailsOpen(false);
-          onPlay?.();
-          if (!resolvedContentId || !resolvedContentType) {
-            return;
-          }
-          router.push(`/player?id=${resolvedContentId}&type=${resolvedContentType}`);
-        }}
-        isInWatchlist={isInWatchlist}
-        isLiked={isLiked}
-      />
     </>
   );
 }

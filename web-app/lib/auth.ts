@@ -205,9 +205,13 @@ export function createErrorResponse(
  * @param status - HTTP status code (default: 200)
  * @returns Response object
  */
-export function createSuccessResponse<T>(data: T, status: number = 200): Response {
+export function createSuccessResponse<T>(
+  data: T,
+  status: number = 200,
+  headers?: Record<string, string>
+): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 }

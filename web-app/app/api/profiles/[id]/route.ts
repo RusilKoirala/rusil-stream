@@ -40,6 +40,7 @@ const updateProfileSchema = z.object({
       recommendedContent: z.boolean().optional(),
       episodeReminders: z.boolean().optional(),
     }).optional(),
+    playerSettings: z.record(z.string(), z.any()).optional(),
   }).optional(),
 }).strict();
 

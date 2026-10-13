@@ -3,6 +3,12 @@ import { validateApiAuth, createErrorResponse, createSuccessResponse } from '@/l
 import { getDatabase, WatchProgress } from '@/lib/db';
 import { z } from 'zod';
 
+// Watch history is per-session and must always reflect the latest write so it
+// syncs across devices.
+export const dynamic = 'force-dynamic';
+
+const NO_STORE = { 'Cache-Control': 'no-store' };
+
 /**
  * Watch Progress API Routes
  * 
@@ -21,6 +27,11 @@ const updateWatchProgressSchema = z.object({
   currentTime: z.number().min(0),
   duration: z.number().positive(),
   percentageWatched: z.number().min(0).max(100),
+  title: z.string().optional(),
+  posterPath: z.string().nullable().optional(),
+  backdropPath: z.string().nullable().optional(),
+  year: z.string().optional(),
+  rating: z.number().optional(),
 });
 
 /**
@@ -57,7 +68,7 @@ export async function GET(request: NextRequest) {
       .sort({ lastWatchedAt: -1 })
       .toArray();
 
-    return createSuccessResponse(continueWatchingItems);
+    return createSuccessResponse(continueWatchingItems, 200, NO_STORE);
   } catch (error) {
     console.error('Error fetching watch progress:', error);
     return createErrorResponse(
@@ -101,6 +112,11 @@ export async function POST(request: NextRequest) {
       currentTime,
       duration,
       percentageWatched,
+      title,
+      posterPath,
+      backdropPath,
+      year,
+      rating,
     } = validationResult.data;
 
     const db = await getDatabase();
@@ -129,6 +145,11 @@ export async function POST(request: NextRequest) {
       duration,
       percentageWatched,
       lastWatchedAt: new Date(),
+      ...(title !== undefined && { title }),
+      ...(posterPath !== undefined && { posterPath }),
+      ...(backdropPath !== undefined && { backdropPath }),
+      ...(year !== undefined && { year }),
+      ...(rating !== undefined && { rating }),
     };
 
     await watchHistoryCollection.updateOne(
