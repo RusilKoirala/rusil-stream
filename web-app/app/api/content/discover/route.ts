@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchBackdropsForItems } from '@/lib/tmdb/logo-fetcher';
 
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+// Server-only route handler: accept either key so it does not 500 in production
+// when only the secret TMDB_API_KEY is configured.
+const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 async function fetchWithRetry(url: string, retries = 2, timeout = 10000): Promise<Response> {

@@ -1,5 +1,10 @@
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+// This module only ever runs on the server (route handlers + parsers), so prefer
+// the secret key. Reading NEXT_PUBLIC_* alone silently produced label-less
+// backdrops in production whenever only TMDB_API_KEY was configured.
+const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+let missingKeyWarned = false;
 
 async function fetchWithRetry(url: string, retries = 2, timeout = 5000): Promise<Response> {
   for (let i = 0; i < retries; i++) {
@@ -24,6 +29,17 @@ async function fetchWithRetry(url: string, retries = 2, timeout = 5000): Promise
 }
 
 export async function fetchBackdropWithLogo(mediaType: 'movie' | 'tv', id: number): Promise<string | null> {
+  if (!TMDB_API_KEY) {
+    if (!missingKeyWarned) {
+      missingKeyWarned = true;
+      console.error(
+        '[tmdb] No TMDB API key configured (TMDB_API_KEY / NEXT_PUBLIC_TMDB_API_KEY). ' +
+        'English logo backdrops are disabled — falling back to plain backdrops.'
+      );
+    }
+    return null;
+  }
+
   try {
     const response = await fetchWithRetry(
       `${TMDB_BASE_URL}/${mediaType}/${id}/images?api_key=${TMDB_API_KEY}&include_image_language=en,null`,
@@ -31,7 +47,10 @@ export async function fetchBackdropWithLogo(mediaType: 'movie' | 'tv', id: numbe
       5000
     );
     
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn(`[tmdb] Logo backdrop request failed for ${mediaType}/${id}: HTTP ${response.status}`);
+      return null;
+    }
     
     const data = await response.json();
     
@@ -45,8 +64,12 @@ export async function fetchBackdropWithLogo(mediaType: 'movie' | 'tv', id: numbe
     
     return `https://image.tmdb.org/t/p/w780${backdrop.file_path}`;
   } catch (error) {
-    // Silently fail - this is non-critical functionality
-    // The app will use default backdrop from main API response
+    // Non-critical: the caller falls back to the default backdrop from the main
+    // API response. Log once per failure so this never fails silently again.
+    console.warn(
+      `[tmdb] Logo backdrop fetch error for ${mediaType}/${id}:`,
+      error instanceof Error ? error.message : error
+    );
     return null;
   }
 }
