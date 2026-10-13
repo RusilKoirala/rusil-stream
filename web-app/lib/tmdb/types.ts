@@ -221,7 +221,13 @@ export interface Content {
   type: 'movie' | 'tv';
   title: string;
   posterPath: string | null;
+  /** Plain backdrop (may be unbranded). Used for hero/detail backgrounds. */
   backdropPath: string | null;
+  /**
+   * English TMDB backdrop with the title logo baked into the artwork.
+   * Only for cards/rows — never for hero or detail backgrounds.
+   */
+  logoBackdropPath?: string | null;
   logo?: string | null;
   overview: string;
   releaseDate: string;

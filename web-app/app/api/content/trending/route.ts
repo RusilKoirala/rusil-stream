@@ -57,10 +57,11 @@ export async function GET(request: NextRequest) {
       itemsToEnhance.map(item => ({ id: item.id, mediaType: item.type }))
     );
 
-    // Update backdropPath with English backdrops (with logos)
+    // Expose the logo-bearing backdrop separately so plain backdropPath stays
+    // title-free for hero / detail backgrounds.
     const enhancedContent = content.map((item, index) => {
       if (index < itemsToEnhance.length && backdrops[index]) {
-        return { ...item, backdropPath: backdrops[index] };
+        return { ...item, logoBackdropPath: backdrops[index] };
       }
       return item;
     });

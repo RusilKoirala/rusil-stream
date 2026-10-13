@@ -39,7 +39,9 @@ export function HorizontalContentRow({
       {/* Horizontal Scrollable Cards */}
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
         {items.slice(0, 12).map((item) => {
-          const backdrop = item.backdropPath || item.posterPath;
+          // Cards use the English backdrop with the title logo baked in, and
+          // fall back to the plain artwork. Hero/detail keep using backdropPath.
+          const backdrop = item.logoBackdropPath || item.backdropPath || item.posterPath;
           if (!backdrop) return null;
 
           return shouldPreview ? (

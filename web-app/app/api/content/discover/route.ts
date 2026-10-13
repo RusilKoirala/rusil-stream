@@ -68,15 +68,17 @@ export async function GET(request: NextRequest) {
       mediaType
     );
 
-    // Transform TMDB results with English backdrops (which have logos)
+    // Transform TMDB results. The plain backdrop stays title-free (hero/detail),
+    // while the English logo-bearing variant is exposed separately for cards.
     const transformedResults = items.map((item: any, index: number) => ({
       id: item.id,
       type: mediaType as 'movie' | 'tv',
       title: item.title || item.name,
       overview: item.overview,
-      backdropPath: backdrops[index] || (item.backdrop_path 
+      backdropPath: item.backdrop_path 
         ? `https://image.tmdb.org/t/p/w780${item.backdrop_path}`
-        : null),
+        : null,
+      logoBackdropPath: backdrops[index] || null,
       posterPath: item.poster_path
         ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
         : null,
