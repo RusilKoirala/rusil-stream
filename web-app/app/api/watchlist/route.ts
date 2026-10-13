@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server';
 import { validateApiAuth, createErrorResponse, createSuccessResponse } from '@/lib/auth';
 import { getDatabase, WatchlistItem } from '@/lib/db';
 import { getDetails } from '@/lib/tmdb/service';
-import { fetchBackdropsForItems } from '@/lib/tmdb/logo-fetcher';
 import type { Content } from '@/lib/tmdb/types';
 import { z } from 'zod';
 
@@ -79,19 +78,7 @@ export async function GET(request: NextRequest) {
       .filter((result): result is PromiseFulfilledResult<Content> => result.status === 'fulfilled')
       .map((result) => result.value);
 
-    // Replace backdrops with English variants (title logo is baked into the image)
-    const backdrops = await fetchBackdropsForItems(
-      hydratedWatchlist.map(item => ({ id: item.id, mediaType: item.type }))
-    );
-
-    const enhancedWatchlist = hydratedWatchlist.map((item, index) => {
-      if (backdrops[index]) {
-        return { ...item, backdropPath: backdrops[index] };
-      }
-      return item;
-    });
-
-    return createSuccessResponse(enhancedWatchlist);
+    return createSuccessResponse(hydratedWatchlist);
   } catch (error) {
     console.error('Error fetching watchlist:', error);
     return createErrorResponse(
